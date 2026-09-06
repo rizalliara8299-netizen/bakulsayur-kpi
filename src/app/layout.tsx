@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import "./legacy-dashboard.css";
 import "./daily-workspace.css";
+import "./admin-control.css";
 
 export const metadata: Metadata = {
   title: "KPI Bakul Sayur",
