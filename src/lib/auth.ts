@@ -10,7 +10,10 @@ export async function requireUser() {
     .select("id,display_name,email,role,organization_id,is_active")
     .eq("id", data.user.id)
     .single();
-  if (!profile?.is_active) redirect("/login?error=Akun tidak aktif");
+  if (!profile?.is_active) {
+    await supabase.auth.signOut();
+    redirect("/login?error=Akun belum diaktifkan oleh Superadmin");
+  }
   return { supabase, user: data.user, profile };
 }
 
