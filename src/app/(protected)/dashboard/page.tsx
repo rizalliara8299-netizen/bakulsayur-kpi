@@ -1,4 +1,4 @@
-import { UnifiedDashboardAppV2 } from "@/components/unified-dashboard-app-v2";
+import { UnifiedDashboardAppV3 } from "@/components/unified-dashboard-app-v3";
 import { requireUser } from "@/lib/auth";
 
 export default async function DashboardPage() {
@@ -17,7 +17,7 @@ export default async function DashboardPage() {
   }
 
   return (
-    <UnifiedDashboardAppV2
+    <UnifiedDashboardAppV3
       initialBundle={data || {}}
       displayName={profile?.display_name || "Admin"}
       role={String(profile?.role || "viewer")}
