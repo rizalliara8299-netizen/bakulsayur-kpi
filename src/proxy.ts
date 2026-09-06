@@ -14,18 +14,16 @@ export async function proxy(request: NextRequest) {
       },
     },
   });
-
   const { data } = await supabase.auth.getClaims();
-  const isLogin = request.nextUrl.pathname.startsWith("/login");
-  const isRegister = request.nextUrl.pathname.startsWith("/register");
-  const isProtected = request.nextUrl.pathname.startsWith("/dashboard");
+  const path = request.nextUrl.pathname;
+  const isPublicAuth = path.startsWith("/login") || path.startsWith("/register");
 
-  if (!data?.claims && isProtected) {
+  if (!data?.claims && !isPublicAuth) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
   }
-  if (data?.claims && (isLogin || isRegister)) {
+  if (data?.claims && isPublicAuth) {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
     return NextResponse.redirect(url);
