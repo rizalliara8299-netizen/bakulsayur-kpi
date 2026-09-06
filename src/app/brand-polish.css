@@ -1,0 +1,88 @@
+:root{
+  --bs-green:#077348;
+  --bs-green-2:#0a8b59;
+  --bs-green-dark:#123d2f;
+  --bs-sky:#39b7e5;
+  --bs-teal:#29b8bb;
+  --bs-ink:#19221f;
+  --bs-canvas:#f3f7f7;
+}
+
+body,.shell,.main{background:var(--bs-canvas)!important}
+
+/* Use the supplied Bakul Sayur logo, tightly cropped and proportioned. */
+.legacy-brand{
+  min-height:132px!important;
+  padding:8px 18px 18px!important;
+  align-items:center!important;
+  justify-content:center!important;
+}
+.brand-logo-fallback{
+  width:160px!important;
+  height:103px!important;
+  background:#fff url('/bakul-sayur-logo.svg') center/contain no-repeat!important;
+  border-radius:18px;
+  box-shadow:0 10px 26px rgba(0,0,0,.14);
+  overflow:hidden;
+}
+.brand-logo-fallback span,.brand-logo-fallback b{display:none!important}
+
+/* Keep the old blue personality, but harmonize it with the Bakul Sayur green. */
+.sidebar{background:#1c211f!important}
+.nav-item.active{
+  background:linear-gradient(135deg,var(--bs-sky),var(--bs-teal))!important;
+  box-shadow:0 11px 28px rgba(40,177,200,.24)!important;
+}
+.legacy-hero{
+  background:linear-gradient(120deg,#39b8e5 0%,#35b7dc 58%,#2db8bc 100%)!important;
+}
+.admin-avatar{color:var(--bs-green)!important}
+.btn-primary{
+  background:linear-gradient(135deg,var(--bs-green),var(--bs-green-2))!important;
+  box-shadow:0 8px 20px rgba(7,115,72,.2)!important;
+}
+.btn-soft{color:#116a4c!important;background:#e8f6f0!important}
+.metric-card.inventory-featured{border-color:#b7dfcf!important}
+.metric-card.inventory-featured .metric-icon{background:#e4f5ee!important;color:var(--bs-green)!important}
+.metric-card.inventory-featured>small{color:var(--bs-green)!important}
+
+/* Management analytics: green is now deliberate brand/status color, not a separate palette. */
+.analytics-health-card{background:linear-gradient(145deg,#113c2e,#176047)!important}
+.health-track i{background:#6ed6ae!important}
+.analytics-final-banner span,.analytics-final-banner strong,
+.analytics-period-chip,.analytics-kpi-breakdown article>b,
+.profile-main span,.profile-rank strong,.profile-kpi-grid article strong{color:var(--bs-green)!important}
+.analytics-export-actions button.primary{background:var(--bs-green)!important;border-color:var(--bs-green)!important}
+.analytics-message{border-color:#cbe8dc!important;background:#eff9f5!important;color:#176446!important}
+.analytics-delta.good{background:#e5f5ee!important;color:var(--bs-green)!important}
+.analytics-rank.first{background:#e1f3eb!important;color:var(--bs-green)!important}
+.profile-avatar{background:linear-gradient(145deg,var(--bs-green),#1fa271)!important}
+.trend-track i{background:linear-gradient(180deg,#43bf92,var(--bs-green))!important}
+.quality-list progress::-webkit-progress-value{background:var(--bs-green)!important}
+.executive-sentence b{color:#166145!important}
+.executive-three .strength h3{color:var(--bs-green)!important}
+.analytics-closing-info strong{color:var(--bs-green)!important}
+
+/* Slightly cooler neutral surfaces make cyan + green read as one system. */
+.card,.metric-card,.kpi-card,.analytics-kpi-grid article,.profile-metric-grid article{border-color:#e4ece9!important}
+.analytics-panel,.analytics-executive,.profile-hero{box-shadow:0 12px 34px rgba(27,55,45,.055)!important}
+
+@media(max-width:920px){
+  .legacy-brand{
+    display:flex!important;
+    min-height:66px!important;
+    padding:5px 10px 8px!important;
+  }
+  .brand-logo-fallback{
+    width:104px!important;
+    height:58px!important;
+    border-radius:12px;
+    box-shadow:none;
+  }
+}
+
+@media(max-width:640px){
+  .legacy-brand{min-height:60px!important;padding-bottom:6px!important}
+  .brand-logo-fallback{width:92px!important;height:52px!important}
+  .legacy-hero{background:linear-gradient(135deg,#38b7e3,#30b7c6)!important}
+}
