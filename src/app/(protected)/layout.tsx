@@ -13,7 +13,7 @@ export default async function ProtectedLayout({ children }: Readonly<{ children:
         <div className="brand legacy-brand" aria-label="Bakul Sayur">
           <div className="brand-logo-fallback"><span>▱</span><b>Bakul Sayur</b></div>
         </div>
-        <AppNav />
+        <AppNav role={role} />
         <div className="sidebar-foot">
           <strong>Bakul Sayur</strong>
           <span>Manajemen KPI Karyawan</span>
