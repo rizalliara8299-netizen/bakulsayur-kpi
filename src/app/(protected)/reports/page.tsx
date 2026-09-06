@@ -1,24 +1,27 @@
 import { Badge, EmptyRow, PageHeader, formatNumber, statusTone } from "@/components/page-ui";
 import { requireUser } from "@/lib/auth";
 
-function monthRange() {
-  const now = new Date();
-  const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString().slice(0,10);
-  const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth()+1, 0)).toISOString().slice(0,10);
-  return { start, end };
+function monthRangeMakassar() {
+  const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Makassar", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date());
+  const map = Object.fromEntries(parts.map((p) => [p.type, p.value]));
+  const year = Number(map.year);
+  const month = Number(map.month);
+  const endDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  const mm = String(month).padStart(2, "0");
+  return { start: `${year}-${mm}-01`, end: `${year}-${mm}-${String(endDay).padStart(2, "0")}` };
 }
 
 export default async function ReportsPage({ searchParams }: { searchParams: Promise<{ start?: string; end?: string; employee?: string }> }) {
   const params = await searchParams;
-  const defaults = monthRange();
+  const defaults = monthRangeMakassar();
   const start = params.start || defaults.start;
   const end = params.end || defaults.end;
   const { supabase } = await requireUser();
-  const { data: employees } = await supabase.from("employees").select("id,name").eq("status","active").order("name");
+  const { data: employees } = await supabase.from("employees").select("id,name").eq("status","active").is("deleted_at", null).order("name");
 
-  let productionQuery = supabase.from("production_entries").select("id,work_date,quantity,total_points,unit_snapshot,employees(name),kpis(name)").gte("work_date",start).lte("work_date",end).order("work_date",{ascending:false});
-  let attendanceQuery = supabase.from("attendance_entries").select("id,work_date,attendance_status,zone_result,employee_id").gte("work_date",start).lte("work_date",end);
-  let errorsQuery = supabase.from("error_cases").select("id,error_date,error_type,evaluation_status,performer_employee_id,responsible_employee_id").gte("error_date",start).lte("error_date",end);
+  let productionQuery = supabase.from("production_entries").select("id,work_date,quantity,total_points,unit_snapshot,employees(name),kpis(name)").is("deleted_at", null).gte("work_date",start).lte("work_date",end).order("work_date",{ascending:false});
+  let attendanceQuery = supabase.from("attendance_entries").select("id,work_date,attendance_status,zone_result,employee_id").is("deleted_at", null).gte("work_date",start).lte("work_date",end);
+  let errorsQuery = supabase.from("error_cases").select("id,error_date,error_type,evaluation_status,performer_employee_id,responsible_employee_id").is("deleted_at", null).gte("error_date",start).lte("error_date",end);
   if (params.employee) {
     productionQuery = productionQuery.eq("employee_id",params.employee);
     attendanceQuery = attendanceQuery.eq("employee_id",params.employee);
@@ -27,7 +30,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
     productionQuery,
     attendanceQuery,
     errorsQuery,
-    supabase.from("orders").select("id,total_products,status").gte("order_date",start).lte("order_date",end),
+    supabase.from("orders").select("id,total_products,status").is("deleted_at", null).gte("order_date",start).lte("order_date",end),
   ]);
   const relevantErrors = params.employee ? (errors||[]).filter(e => (e.evaluation_status==="Dibebankan ke PJ" ? e.responsible_employee_id : (e.performer_employee_id||e.responsible_employee_id)) === params.employee) : (errors||[]);
   const totalPoints = (production||[]).reduce((s,r)=>s+Number(r.total_points||0),0);
