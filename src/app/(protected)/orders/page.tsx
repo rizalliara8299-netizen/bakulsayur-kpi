@@ -2,13 +2,19 @@ import { createOrder } from "@/app/actions/core";
 import { Badge, EmptyRow, Flash, PageHeader, statusTone } from "@/components/page-ui";
 import { canWrite, requireUser } from "@/lib/auth";
 
+function todayMakassar() {
+  const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Makassar", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date());
+  const map = Object.fromEntries(parts.map((p) => [p.type, p.value]));
+  return `${map.year}-${map.month}-${map.day}`;
+}
+
 export default async function OrdersPage({ searchParams }: { searchParams: Promise<{ saved?: string; error?: string }> }) {
   const params = await searchParams;
   const { supabase, profile } = await requireUser();
-  const today = new Date().toISOString().slice(0,10);
+  const today = todayMakassar();
   const [{ data: employees }, { data: rows }] = await Promise.all([
-    supabase.from("employees").select("id,name,teams!inner(name)").eq("status","active").eq("teams.name","Produksi").order("name"),
-    supabase.from("orders").select("id,order_date,order_number,customer_name_snapshot,total_products,status,notes,employees!orders_responsible_employee_id_fkey(name),order_allocations(quantity,employees(name))").order("order_date",{ascending:false}).order("created_at",{ascending:false}).limit(100),
+    supabase.from("employees").select("id,name,teams!inner(name)").eq("status","active").is("deleted_at", null).eq("teams.name","Produksi").order("name"),
+    supabase.from("orders").select("id,order_date,order_number,customer_name_snapshot,total_products,status,notes,employees!orders_responsible_employee_id_fkey(name),order_allocations(quantity,employees(name))").is("deleted_at", null).order("order_date",{ascending:false}).order("created_at",{ascending:false}).limit(100),
   ]);
   return <>
     <PageHeader title="Pesanan & Penanggung Jawab" description="Satu pesanan disimpan atomik bersama pembagian packaging dan poin petugas." />
