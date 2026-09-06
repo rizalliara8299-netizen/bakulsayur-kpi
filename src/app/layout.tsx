@@ -5,10 +5,11 @@ import "./daily-workspace.css";
 import "./admin-control.css";
 import "./admin-records.css";
 import "./unified-app.css";
+import "./inventory-revision.css";
 
 export const metadata: Metadata = {
   title: "KPI Bakul Sayur",
-  description: "Manajemen KPI, kehadiran, pesanan, inventory, dan evaluasi Bakul Sayur",
+  description: "Manajemen KPI Produksi, checklist Inventory, kehadiran, dan evaluasi Bakul Sayur",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
