@@ -4,6 +4,7 @@ import "./legacy-dashboard.css";
 import "./daily-workspace.css";
 import "./admin-control.css";
 import "./admin-records.css";
+import "./unified-app.css";
 
 export const metadata: Metadata = {
   title: "KPI Bakul Sayur",
