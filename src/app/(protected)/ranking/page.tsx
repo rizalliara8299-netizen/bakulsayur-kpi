@@ -5,8 +5,8 @@ export default async function RankingPage() {
   const { supabase } = await requireUser();
   const [{ data: ranking }, { data: attendance }, { data: errors }] = await Promise.all([
     supabase.from("v_production_ranking").select("employee_id,employee_code,name,total_points,total_products,entry_count").order("total_points",{ascending:false}),
-    supabase.from("attendance_entries").select("employee_id,attendance_status,zone_result"),
-    supabase.from("error_cases").select("performer_employee_id,responsible_employee_id,evaluation_status,error_type"),
+    supabase.from("attendance_entries").select("employee_id,attendance_status,zone_result").is("deleted_at", null),
+    supabase.from("error_cases").select("performer_employee_id,responsible_employee_id,evaluation_status,error_type").is("deleted_at", null),
   ]);
   const attendMap = new Map<string,{hadir:number;green:number;red:number}>();
   for (const row of attendance||[]) { const item=attendMap.get(row.employee_id)||{hadir:0,green:0,red:0}; if(row.attendance_status==="Hadir") item.hadir++; if(row.zone_result==="Hijau") item.green++; if(row.zone_result==="Merah") item.red++; attendMap.set(row.employee_id,item); }
