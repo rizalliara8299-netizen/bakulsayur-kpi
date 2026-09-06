@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import "./legacy-dashboard.css";
+import "./daily-workspace.css";
 
 export const metadata: Metadata = {
   title: "KPI Bakul Sayur",
