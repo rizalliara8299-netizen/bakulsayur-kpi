@@ -21,7 +21,7 @@ function isModule(value: string): value is ModuleKey {
 async function requireAdmin() {
   const auth = await requireUser();
   const role = String(auth.profile?.role || "");
-  if (!['admin', 'superadmin'].includes(role)) redirect("/settings?error=Akses admin diperlukan");
+  if (!["admin", "superadmin"].includes(role)) redirect("/settings?error=Akses admin diperlukan");
   return auth;
 }
 
@@ -58,4 +58,30 @@ export async function adminBulkRestore(formData: FormData) {
 
   refreshModule(module);
   redirect(`/admin?saved=${encodeURIComponent(`${Number(data || 0)} data ${modules[module].label.toLowerCase()} berhasil dipulihkan`)}`);
+}
+
+export async function adminArchiveRecord(formData: FormData) {
+  const { supabase } = await requireAdmin();
+  const module = String(formData.get("module") || "").trim().toLowerCase();
+  const id = String(formData.get("id") || "").trim();
+  if (!isModule(module) || !id) redirect("/admin?error=Record tidak valid");
+
+  const { data, error } = await supabase.rpc("admin_soft_delete_record", { p_module: module, p_id: id });
+  if (error) redirect(`/admin?error=${encodeURIComponent(error.message)}`);
+
+  refreshModule(module);
+  redirect(`/admin?saved=${encodeURIComponent(data ? "Record berhasil diarsipkan" : "Record sudah tidak aktif")}`);
+}
+
+export async function adminRestoreRecord(formData: FormData) {
+  const { supabase } = await requireAdmin();
+  const module = String(formData.get("module") || "").trim().toLowerCase();
+  const id = String(formData.get("id") || "").trim();
+  if (!isModule(module) || !id) redirect("/admin?error=Record tidak valid");
+
+  const { data, error } = await supabase.rpc("admin_restore_record", { p_module: module, p_id: id });
+  if (error) redirect(`/admin?error=${encodeURIComponent(error.message)}`);
+
+  refreshModule(module);
+  redirect(`/admin?saved=${encodeURIComponent(data ? "Record berhasil dipulihkan" : "Record sudah aktif")}`);
 }
