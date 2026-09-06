@@ -8,6 +8,11 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+  deployments: read
+  statuses: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -22,3 +27,10 @@ jobs:
         run: npm install
       - name: Build
         run: npm run build
+      - name: Wait for Vercel preview
+        uses: vercel/wait-for-deployment-action@0e2b0c5c5cce31f1648108aeec56467187aca037
+        with:
+          environment: preview
+          timeout: 180
+          check-interval: 5
+          require-deployment-id: false
