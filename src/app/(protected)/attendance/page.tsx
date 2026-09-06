@@ -2,13 +2,19 @@ import { saveAttendance } from "@/app/actions/core";
 import { Badge, EmptyRow, Flash, PageHeader, statusTone } from "@/components/page-ui";
 import { canWrite, requireUser } from "@/lib/auth";
 
+function todayMakassar() {
+  const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Makassar", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date());
+  const map = Object.fromEntries(parts.map((p) => [p.type, p.value]));
+  return `${map.year}-${map.month}-${map.day}`;
+}
+
 export default async function AttendancePage({ searchParams }: { searchParams: Promise<{ saved?: string; error?: string }> }) {
   const params = await searchParams;
   const { supabase, profile } = await requireUser();
-  const today = new Date().toISOString().slice(0,10);
+  const today = todayMakassar();
   const [{ data: employees }, { data: rows }] = await Promise.all([
-    supabase.from("employees").select("id,name,employee_code").eq("status","active").order("name"),
-    supabase.from("attendance_entries").select("id,work_date,attendance_status,arrival_time,zone_result,notes,employees(name)").order("work_date",{ascending:false}).order("created_at",{ascending:false}).limit(120),
+    supabase.from("employees").select("id,name,employee_code").eq("status","active").is("deleted_at", null).order("name"),
+    supabase.from("attendance_entries").select("id,work_date,attendance_status,arrival_time,zone_result,notes,employees(name)").is("deleted_at", null).order("work_date",{ascending:false}).order("created_at",{ascending:false}).limit(120),
   ]);
   return <>
     <PageHeader title="Kehadiran & Jam Kedatangan" description="Zona dihitung otomatis berdasarkan tim dan policy yang berlaku pada tanggal kehadiran." />
