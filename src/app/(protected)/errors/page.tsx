@@ -2,14 +2,20 @@ import { createErrorCase } from "@/app/actions/core";
 import { Badge, EmptyRow, Flash, PageHeader, statusTone } from "@/components/page-ui";
 import { canWrite, requireUser } from "@/lib/auth";
 
+function todayMakassar() {
+  const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Makassar", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date());
+  const map = Object.fromEntries(parts.map((p) => [p.type, p.value]));
+  return `${map.year}-${map.month}-${map.day}`;
+}
+
 export default async function ErrorsPage({ searchParams }: { searchParams: Promise<{ saved?: string; error?: string }> }) {
   const params = await searchParams;
   const { supabase, profile } = await requireUser();
-  const today = new Date().toISOString().slice(0,10);
+  const today = todayMakassar();
   const [{ data: employees }, { data: orders }, { data: rows }] = await Promise.all([
-    supabase.from("employees").select("id,name").eq("status","active").order("name"),
-    supabase.from("orders").select("id,order_number,customer_name_snapshot").order("order_date",{ascending:false}).limit(100),
-    supabase.from("error_cases").select("id,error_date,error_type,chronology,evaluation_status,customer_name_snapshot,severity,notes,performer:employees!error_cases_performer_employee_id_fkey(name),responsible:employees!error_cases_responsible_employee_id_fkey(name),orders(order_number)").order("error_date",{ascending:false}).order("created_at",{ascending:false}).limit(100),
+    supabase.from("employees").select("id,name").eq("status","active").is("deleted_at", null).order("name"),
+    supabase.from("orders").select("id,order_number,customer_name_snapshot").is("deleted_at", null).order("order_date",{ascending:false}).limit(100),
+    supabase.from("error_cases").select("id,error_date,error_type,chronology,evaluation_status,customer_name_snapshot,severity,notes,performer:employees!error_cases_performer_employee_id_fkey(name),responsible:employees!error_cases_responsible_employee_id_fkey(name),orders(order_number)").is("deleted_at", null).order("error_date",{ascending:false}).order("created_at",{ascending:false}).limit(100),
   ]);
   return <>
     <PageHeader title="Komplain & Kesalahan" description="Produktivitas tetap terpisah dari evaluasi kesalahan agar penilaian transparan." />
