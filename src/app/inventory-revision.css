@@ -1,0 +1,83 @@
+.inventory-featured { border-color:#7dd9bd; }
+.inventory-featured .metric-icon { color:#07845f; background:#e1f8ef; }
+.inventory-featured > small { color:#07845f; }
+
+.inventory-checklist-layout { display:grid; grid-template-columns:minmax(520px,1.15fr) minmax(420px,.85fr); gap:22px; align-items:start; }
+.inventory-checklist-card { overflow:hidden; }
+.inventory-checklist-head { display:flex; align-items:flex-start; justify-content:space-between; gap:22px; padding:22px 24px; border-bottom:1px solid #e8edf3; }
+.inventory-checklist-head h2 { margin:0; font-size:20px; letter-spacing:-.5px; }
+.inventory-checklist-head p { margin:7px 0 0; color:#71809a; font-size:12px; }
+.checklist-controls { display:flex; gap:10px; min-width:380px; }
+.checklist-controls .field { flex:1; }
+.checklist-list { display:grid; gap:0; }
+.checklist-row { display:grid; grid-template-columns:42px minmax(0,1fr) auto; gap:14px; align-items:center; padding:15px 20px; border-bottom:1px solid #edf1f5; transition:background .14s ease; }
+.checklist-row:last-child { border-bottom:0; }
+.checklist-row:hover { background:#fbfdff; }
+.checklist-number { width:34px; height:34px; display:grid; place-items:center; border-radius:11px; background:#edf3f7; color:#65748b; font-size:11px; font-weight:900; }
+.checklist-copy { min-width:0; display:grid; gap:5px; }
+.checklist-copy strong { font-size:13px; color:#172033; line-height:1.35; }
+.checklist-copy span { color:#7b899d; font-size:10px; }
+.checklist-actions { display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end; }
+.checklist-actions button { min-height:34px; padding:0 10px; border:0; border-radius:10px; cursor:pointer; color:#14744f; background:#e7f8ef; font-size:10px; font-weight:900; }
+.checklist-actions button:nth-child(2) { color:#55657a; background:#eef2f6; }
+.checklist-actions button.warn { color:#a7630c; background:#fff3df; }
+.checklist-actions button:disabled { opacity:.45; cursor:wait; }
+.checklist-row.status-selesai .checklist-number,.checklist-row.status-tidak-ada-kebutuhan .checklist-number { color:#fff; background:#24a777; }
+.checklist-row.status-ada-kendala .checklist-number,.checklist-row.status-belum-selesai .checklist-number { color:#fff; background:#ee9b2d; }
+
+.inventory-filter { margin-bottom:18px; }
+.inventory-report-stats { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px; margin-bottom:20px; }
+.inventory-stat { min-height:126px; padding:20px; display:flex; flex-direction:column; align-items:flex-start; justify-content:center; }
+.inventory-stat span { color:#74839a; font-size:10px; font-weight:900; letter-spacing:.5px; }
+.inventory-stat strong { margin-top:8px; font-size:30px; line-height:1; letter-spacing:-1px; color:#142035; }
+.inventory-stat small { margin-top:8px; color:#8794a7; font-size:10px; }
+.inventory-stat.danger { border-color:#f8d7c1; background:#fffaf5; }
+.inventory-stat.danger strong { color:#c96919; }
+.completion-cell { min-width:120px; }
+.completion-cell > span { font-size:11px; font-weight:900; }
+.completion-cell > div { height:7px; margin-top:6px; overflow:hidden; border-radius:999px; background:#e8eef3; }
+.completion-cell i { display:block; height:100%; border-radius:999px; background:#24a777; }
+.inventory-task-report-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin-top:15px; }
+.inventory-task-report { display:flex; align-items:center; justify-content:space-between; gap:15px; padding:15px 16px; border:1px solid #e8edf3; border-radius:15px; background:#fbfdff; }
+.inventory-task-report > div { display:grid; gap:5px; }
+.inventory-task-report strong { font-size:12px; }
+.inventory-task-report span { color:#7a879a; font-size:10px; }
+.inventory-task-report b { color:#079bd6; font-size:18px; }
+.inventory-status { display:inline-flex; min-height:26px; align-items:center; padding:0 9px; border-radius:999px; font-size:9px; font-weight:900; color:#526176; background:#edf2f6; }
+.inventory-status.status-selesai,.inventory-status.status-tidak-ada-kebutuhan { color:#12734e; background:#e4f7ee; }
+.inventory-status.status-ada-kendala,.inventory-status.status-belum-selesai { color:#9d5b0d; background:#fff0d8; }
+
+.inventory-task-add { display:grid; grid-template-columns:1fr auto; gap:10px; margin:17px 0 20px; }
+.inventory-task-add input { height:44px; border:1px solid #d9e1e9; border-radius:12px; padding:0 13px; outline:none; }
+.inventory-task-add input:focus { border-color:#56c8ef; box-shadow:0 0 0 3px rgba(86,200,239,.1); }
+.inventory-master-list { display:grid; gap:8px; }
+.inventory-master-row { display:flex; align-items:center; justify-content:space-between; gap:15px; padding:13px 14px; border:1px solid #e7edf3; border-radius:14px; background:#fbfdff; }
+.inventory-master-row.inactive { opacity:.62; background:#f5f7f9; }
+.inventory-master-row > div:first-child { display:grid; grid-template-columns:26px 1fr; gap:3px 8px; align-items:center; min-width:0; }
+.inventory-master-row > div:first-child > span { grid-row:1/3; width:25px; height:25px; display:grid; place-items:center; border-radius:8px; background:#e4f4fb; color:#078fc7; font-size:9px; font-weight:900; }
+.inventory-master-row strong { font-size:12px; }
+.inventory-master-row small { color:#8290a3; font-size:9px; }
+.inventory-master-row > div:last-child { display:flex; gap:7px; }
+
+@media(max-width:1120px){
+  .inventory-checklist-layout { grid-template-columns:1fr; }
+  .inventory-report-stats { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@media(max-width:760px){
+  .inventory-checklist-head { display:block; padding:18px; }
+  .checklist-controls { min-width:0; margin-top:15px; display:grid; grid-template-columns:1fr 1fr; }
+  .checklist-row { grid-template-columns:34px 1fr; padding:14px; }
+  .checklist-actions { grid-column:1/-1; justify-content:flex-start; padding-left:48px; }
+  .inventory-task-report-grid { grid-template-columns:1fr; }
+  .inventory-master-row { align-items:flex-start; display:grid; }
+  .inventory-master-row > div:last-child { justify-content:flex-start; }
+}
+@media(max-width:520px){
+  .inventory-report-stats { grid-template-columns:1fr 1fr; gap:9px; }
+  .inventory-stat { min-height:112px; padding:15px; }
+  .inventory-stat strong { font-size:25px; }
+  .checklist-controls { grid-template-columns:1fr; }
+  .checklist-actions { padding-left:0; }
+  .checklist-actions button { flex:1; min-width:80px; }
+  .inventory-task-add { grid-template-columns:1fr; }
+}
