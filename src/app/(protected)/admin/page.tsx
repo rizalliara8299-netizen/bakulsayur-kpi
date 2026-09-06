@@ -1,10 +1,13 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { adminBulkArchive, adminBulkRestore } from "@/app/actions/admin";
+import { adminArchiveRecord, adminBulkArchive, adminBulkRestore, adminRestoreRecord } from "@/app/actions/admin";
+import { ConfirmActionButton } from "@/components/confirm-action-button";
 import { PageHeader, formatNumber } from "@/components/page-ui";
 import { requireUser } from "@/lib/auth";
 
 type Bucket = { active: number; archived?: number; inactive?: number };
+type AdminRecord = { id: string; date: string; title: string; meta: string; archived: boolean };
+type RecordBucket = { active: AdminRecord[]; archived: AdminRecord[] };
 type AdminSnapshot = {
   production: Bucket;
   attendance: Bucket;
@@ -15,6 +18,13 @@ type AdminSnapshot = {
   kpis: Bucket;
   users: Bucket;
   audit_logs: number;
+  records?: {
+    production: RecordBucket;
+    attendance: RecordBucket;
+    inventory: RecordBucket;
+    errors: RecordBucket;
+    orders: RecordBucket;
+  };
 };
 
 const dataModules = [
@@ -29,7 +39,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
   const params = await searchParams;
   const { supabase, profile } = await requireUser();
   const role = String(profile?.role || "");
-  if (!['admin', 'superadmin'].includes(role)) redirect("/settings?error=Akses admin diperlukan");
+  if (!["admin", "superadmin"].includes(role)) redirect("/settings?error=Akses admin diperlukan");
 
   const { data, error } = await supabase.rpc("admin_control_snapshot");
   const snapshot = (data || null) as AdminSnapshot | null;
@@ -53,26 +63,48 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
 
     <section className="card admin-control-panel">
       <div className="admin-control-head">
-        <div><h2>Kontrol Data Operasional</h2><p>Penghapusan di sini menggunakan <strong>soft delete</strong>: data langsung hilang dari operasional tetapi tetap tersimpan dan dapat dipulihkan.</p></div>
+        <div><h2>Kontrol Data Operasional</h2><p>Penghapusan menggunakan <strong>soft delete</strong>: data langsung hilang dari operasional tetapi tetap tersimpan, tercatat di audit, dan dapat dipulihkan.</p></div>
         <div className="safe-delete-badge">↶ Bisa dipulihkan</div>
       </div>
 
       <div className="admin-data-grid">
         {dataModules.map((module) => {
           const bucket = snapshot?.[module.key] || { active: 0, archived: 0 };
+          const records = snapshot?.records?.[module.key] || { active: [], archived: [] };
           return <article className="admin-data-card" key={module.key}>
             <div className="admin-data-card-top"><div><h3>{module.label}</h3><p>{module.description}</p></div><Link href={module.href} prefetch={false}>Buka →</Link></div>
             <div className="admin-data-counts"><div><span>Aktif</span><strong>{formatNumber(bucket.active || 0)}</strong></div><div><span>Arsip</span><strong>{formatNumber(bucket.archived || 0)}</strong></div></div>
 
+            <details className="admin-record-manager" open>
+              <summary>Kelola record terbaru</summary>
+              <div className="admin-record-list">
+                {records.active.length ? records.active.map((record) => <div className="admin-record-row" key={record.id}>
+                  <div><strong>{record.title}</strong><span>{record.date} · {record.meta}</span></div>
+                  <form action={adminArchiveRecord}>
+                    <input type="hidden" name="module" value={module.key} /><input type="hidden" name="id" value={record.id} />
+                    <ConfirmActionButton className="record-delete-btn" message={`Hapus/arsipkan record ${record.title}?`}>Hapus</ConfirmActionButton>
+                  </form>
+                </div>) : <div className="admin-empty-record">Tidak ada record aktif.</div>}
+              </div>
+
+              {records.archived.length ? <div className="admin-archive-block"><div className="admin-subtitle">Arsip terbaru</div>{records.archived.map((record) => <div className="admin-record-row archived" key={record.id}>
+                <div><strong>{record.title}</strong><span>{record.date} · {record.meta}</span></div>
+                <form action={adminRestoreRecord}>
+                  <input type="hidden" name="module" value={module.key} /><input type="hidden" name="id" value={record.id} />
+                  <button className="record-restore-btn" type="submit">Pulihkan</button>
+                </form>
+              </div>)}</div> : null}
+            </details>
+
             <form action={adminBulkArchive} className="admin-danger-form">
               <input type="hidden" name="module" value={module.key} />
               <label><span>Untuk menghapus semua data aktif, ketik:</span><b>{module.phrase}</b></label>
-              <div className="admin-danger-row"><input name="confirmation" placeholder={module.phrase} autoComplete="off" /><button className="btn btn-danger" type="submit">Hapus / Arsipkan</button></div>
+              <div className="admin-danger-row"><input name="confirmation" placeholder={module.phrase} autoComplete="off" /><ConfirmActionButton className="btn btn-danger" message={`Arsipkan SEMUA data aktif ${module.label}?`}>Hapus / Arsipkan</ConfirmActionButton></div>
             </form>
 
             <form action={adminBulkRestore} className="admin-restore-form">
               <input type="hidden" name="module" value={module.key} />
-              <button className="btn btn-restore" type="submit" disabled={!Number(bucket.archived || 0)}>↶ Pulihkan semua arsip</button>
+              <ConfirmActionButton className="btn btn-restore" message={`Pulihkan semua arsip ${module.label}?`}>↶ Pulihkan semua arsip</ConfirmActionButton>
             </form>
           </article>;
         })}
@@ -80,7 +112,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
     </section>
 
     <section className="card admin-note-panel">
-      <div><strong>Proteksi penghapusan aktif</strong><p>Data tidak dihapus permanen dari database. Semua aksi bulk dicatat ke Audit Log beserta jumlah record yang terdampak.</p></div>
+      <div><strong>Proteksi penghapusan aktif</strong><p>Hard delete permanen tidak diekspos di panel. Semua penghapusan operasional reversible dan masuk Audit Log.</p></div>
       <Link href="/audit" className="btn btn-soft">Lihat Audit Log →</Link>
     </section>
   </>;
