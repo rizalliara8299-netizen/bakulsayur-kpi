@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { MasterCrudEnhancer } from "@/components/master-crud-enhancer";
 import "./globals.css";
 import "./legacy-dashboard.css";
 import "./daily-workspace.css";
@@ -8,6 +9,7 @@ import "./unified-app.css";
 import "./inventory-revision.css";
 import "./management-analytics.css";
 import "./brand-polish.css";
+import "./master-crud.css";
 
 export const metadata: Metadata = {
   title: "KPI Bakul Sayur",
@@ -17,7 +19,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="id">
-      <body>{children}</body>
+      <body>
+        {children}
+        <MasterCrudEnhancer />
+      </body>
     </html>
   );
 }
