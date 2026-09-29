@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { logout } from "@/app/actions/auth";
 import { getBrowserSupabase } from "@/lib/supabase/browser";
 import { ManagementReportsPanel, PerformanceProfilesPanel } from "@/components/management-analytics";
@@ -53,16 +53,28 @@ export function UnifiedDashboardAppV3({ initialBundle, displayName, role, organi
   const [invEmployee, setInvEmployee] = useState("");
   const [checkDate, setCheckDate] = useState(today);
   const [checkEmployee, setCheckEmployee] = useState("");
+  const [plannedRoles, setPlannedRoles] = useState<Record<string, string>>({});
   const isAdmin = role === "admin" || role === "superadmin";
   const canWrite = ["superadmin", "admin", "supervisor", "operator"].includes(role);
   const initials = (displayName || "Admin").split(/\s+/).filter(Boolean).slice(0, 2).map(x => x[0]?.toUpperCase()).join("") || "AD";
   const copy = panelCopy[panel];
 
   async function refreshBundle(silent = true) {
-    const { data, error } = await supabase.rpc("get_unified_app_bundle");
+    const [{ data, error }, { data: roleRows }] = await Promise.all([
+      supabase.rpc("get_unified_app_bundle"),
+      supabase.from("employees").select("id,planned_role"),
+    ]);
     if (error) { if (!silent) setToast({ type: "err", text: error.message }); return false; }
-    setBundle(data || {}); return true;
+    setBundle(data || {});
+    setPlannedRoles(Object.fromEntries((roleRows || []).map((row: any) => [row.id, row.planned_role || "employee"])));
+    return true;
   }
+
+  useEffect(() => {
+    supabase.from("employees").select("id,planned_role").then(({ data }) => {
+      setPlannedRoles(Object.fromEntries((data || []).map((row: any) => [row.id, row.planned_role || "employee"])));
+    });
+  }, [supabase]);
   async function task(key: string, fn: () => Promise<{ error?: any }>, success: string) {
     setBusy(key); setToast(null);
     try { const result = await fn(); if (result?.error) throw result.error; await refreshBundle(true); setToast({ type: "ok", text: success }); }
@@ -105,7 +117,7 @@ export function UnifiedDashboardAppV3({ initialBundle, displayName, role, organi
   }
   async function submitEmployee(e: FormEvent<HTMLFormElement>) {
     e.preventDefault(); const fd = new FormData(e.currentTarget);
-    await task("employee-save", async () => supabase.from("employees").insert({ organization_id: organizationId, employee_code: value(fd, "employeeCode").toUpperCase(), name: value(fd, "name"), team_id: value(fd, "teamId"), status: value(fd, "status") || "active", created_by: userId, updated_by: userId }), "Karyawan tersimpan.");
+    await task("employee-save", async () => supabase.from("employees").insert({ organization_id: organizationId, employee_code: value(fd, "employeeCode").toUpperCase(), name: value(fd, "name"), team_id: value(fd, "teamId"), status: value(fd, "status") || "active", planned_role: value(fd, "plannedRole") || "employee", created_by: userId, updated_by: userId }), "Karyawan tersimpan.");
   }
   async function submitKpi(e: FormEvent<HTMLFormElement>) {
     e.preventDefault(); const fd = new FormData(e.currentTarget);
@@ -156,7 +168,7 @@ export function UnifiedDashboardAppV3({ initialBundle, displayName, role, organi
         {panel === "errors" ? <ErrorsPanel canWrite={canWrite} today={today} employees={employees.filter((e: any) => e.status === "active")} orders={orders} rows={errors} busy={busy} submit={submitError} /> : null}
         {panel === "ranking" ? <PerformanceProfilesPanel supabase={supabase} today={today} employees={employees} /> : null}
         {panel === "reports" ? <ManagementReportsPanel supabase={supabase} today={today} isAdmin={isAdmin} displayName={displayName} /> : null}
-        {panel === "employees" ? <EmployeesPanel canManage={isAdmin} teams={bundle.teams || []} employees={employees} busy={busy} submit={submitEmployee} /> : null}
+        {panel === "employees" ? <EmployeesPanel canManage={isAdmin} teams={bundle.teams || []} employees={employees} plannedRoles={plannedRoles} busy={busy} submit={submitEmployee} /> : null}
         {panel === "settings" ? <SettingsPanel isAdmin={isAdmin} bundle={bundle} busy={busy} submitKpi={submitKpi} addInventoryTask={addInventoryTask} renameInventoryTask={renameInventoryTask} toggleInventoryTask={toggleInventoryTask} supabase={supabase} refreshBundle={refreshBundle} setToast={setToast} /> : null}
         {panel === "admin" && isAdmin ? <AdminPanel bundle={bundle} busy={busy} recordAction={adminRecord} bulkAction={adminBulk} switchPanel={switchPanel} /> : null}
       </div>
@@ -201,7 +213,29 @@ function AttendancePanel({ canWrite, today, employees, rows, busy, submit }: any
 
 function ErrorsPanel({ canWrite, today, employees, orders, rows, busy, submit }: any) { return <><SectionHead title="Komplain & Kesalahan" desc="Evaluasi terpisah dari poin produktivitas dan masuk ke analisis bulanan." />{canWrite ? <section className="card panel panel-first"><h2>Catat Kesalahan</h2><form onSubmit={submit} className="form-grid"><label className="field"><span>Tanggal</span><input name="errorDate" type="date" defaultValue={today} required /></label><label className="field"><span>Jenis</span><select name="errorType"><option>Packaging</option><option>Pengantaran</option><option>Belanja</option></select></label><label className="field"><span>Pesanan (opsional/internal)</span><select name="orderId"><option value="">Tanpa pesanan</option>{orders.map((o: any) => <option key={o.id} value={o.id}>{o.order_number} · {o.customer_name_snapshot}</option>)}</select></label><label className="field"><span>Customer</span><input name="customerName" /></label><label className="field"><span>Pelaksana</span><select name="performerEmployeeId"><option value="">Belum diketahui</option>{employees.map((e: any) => <option key={e.id} value={e.id}>{e.name}</option>)}</select></label><label className="field"><span>PJ</span><select name="responsibleEmployeeId"><option value="">Belum ditentukan</option>{employees.map((e: any) => <option key={e.id} value={e.id}>{e.name}</option>)}</select></label><label className="field"><span>Status Evaluasi</span><select name="evaluationStatus"><option>Menunggu evaluasi</option><option>Pelaksana diketahui</option><option>Dibebankan ke PJ</option><option>Bukan kesalahan tim</option><option>Selesai</option></select></label><label className="field"><span>Severity</span><select name="severity"><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="critical">Critical</option></select></label><label className="field full"><span>Kronologi</span><textarea name="chronology" required /></label><label className="field full"><span>Keterangan</span><textarea name="notes" /></label><div className="form-actions full"><button className="btn btn-primary" disabled={busy === "error-save"}>{busy === "error-save" ? "Menyimpan…" : "Simpan Kesalahan"}</button></div></form></section> : null}<section className="card panel"><h2>Riwayat Kesalahan</h2><div className="table-wrap"><table><thead><tr><th>Tanggal</th><th>Jenis</th><th>Customer</th><th>Pelaksana</th><th>PJ</th><th>Status</th><th>Kronologi</th></tr></thead><tbody>{rows.map((r: any) => <tr key={r.id}><td>{r.error_date}</td><td>{r.error_type}</td><td>{r.customer_name_snapshot || "-"}</td><td>{r.performer_name || "-"}</td><td>{r.responsible_name || "-"}</td><td>{r.evaluation_status}</td><td>{r.chronology}</td></tr>)}</tbody></table></div></section></>; }
 
-function EmployeesPanel({ canManage, teams, employees, busy, submit }: any) { return <><SectionHead title="Manajemen Karyawan" desc="Master tim Produksi dan Inventory." />{canManage ? <section className="card panel panel-first"><h2>Tambah Karyawan</h2><form onSubmit={submit} className="form-grid"><label className="field"><span>Kode</span><input name="employeeCode" placeholder="KRY-005" required /></label><label className="field"><span>Nama</span><input name="name" required /></label><label className="field"><span>Tim</span><select name="teamId" required>{teams.map((t: any) => <option key={t.id} value={t.id}>{t.name}</option>)}</select></label><label className="field"><span>Status</span><select name="status"><option value="active">Aktif</option><option value="inactive">Nonaktif</option></select></label><div className="form-actions full"><button className="btn btn-primary" disabled={busy === "employee-save"}>{busy === "employee-save" ? "Menyimpan…" : "Tambah Karyawan"}</button></div></form></section> : null}<section className="card panel"><h2>Daftar Karyawan</h2><div className="table-wrap"><table><thead><tr><th>Kode</th><th>Nama</th><th>Tim</th><th>Status</th></tr></thead><tbody>{employees.map((e: any) => <tr key={e.id}><td>{e.code}</td><td><strong>{e.name}</strong></td><td>{e.team}</td><td>{e.status}</td></tr>)}</tbody></table></div></section></>; }
+function EmployeesPanel({ canManage, teams, employees, plannedRoles, busy, submit }: any) {
+  return <>
+    <SectionHead title="Manajemen Karyawan" desc="Kelola tim sekaligus siapkan role masa depan tanpa langsung membuka akses Admin." />
+    {canManage ? <section className="card panel panel-first employee-create-panel">
+      <div className="panel-title-row"><div><h2>Tambah Karyawan</h2><p className="muted">Role Admin di sini hanya persiapan. Hak akses tetap dikontrol terpisah oleh akun/RBAC.</p></div></div>
+      <form onSubmit={submit} className="form-grid">
+        <label className="field"><span>Kode</span><input name="employeeCode" placeholder="KRY-005" required /></label>
+        <label className="field"><span>Nama</span><input name="name" required /></label>
+        <label className="field"><span>Tim</span><select name="teamId" required>{teams.map((t: any) => <option key={t.id} value={t.id}>{t.name}</option>)}</select></label>
+        <label className="field"><span>Role Sistem (persiapan)</span><select name="plannedRole" defaultValue="employee"><option value="employee">Karyawan</option><option value="admin">Admin — belum aktif</option></select></label>
+        <label className="field"><span>Status</span><select name="status"><option value="active">Aktif</option><option value="inactive">Nonaktif</option></select></label>
+        <div className="form-actions full"><button className="btn btn-primary" disabled={busy === "employee-save"}>{busy === "employee-save" ? "Menyimpan…" : "Tambah Karyawan"}</button></div>
+      </form>
+    </section> : null}
+    <section className="card panel">
+      <div className="panel-title-row"><div><h2>Daftar Karyawan</h2><p className="muted">Role persiapan tidak mengubah akses login sampai akun diaktifkan melalui RBAC.</p></div></div>
+      <div className="table-wrap"><table><thead><tr><th>Kode</th><th>Nama</th><th>Tim</th><th>Role Persiapan</th><th>Status</th></tr></thead><tbody>{employees.map((e: any) => {
+        const plannedRole = plannedRoles?.[e.id] || "employee";
+        return <tr key={e.id}><td>{e.code}</td><td><strong>{e.name}</strong></td><td>{e.team}</td><td><span className={`role-chip ${plannedRole === "admin" ? "role-admin" : ""}`}>{plannedRole === "admin" ? "Admin · belum aktif" : "Karyawan"}</span></td><td><span className={`status-dot-label ${e.status === "active" ? "is-active" : ""}`}>{e.status === "active" ? "Aktif" : "Nonaktif"}</span></td></tr>;
+      })}</tbody></table></div>
+    </section>
+  </>;
+}
 
 function SettingsPanel({ isAdmin, bundle, busy, submitKpi, addInventoryTask, renameInventoryTask, toggleInventoryTask, supabase, refreshBundle, setToast }: any) {
   const [tab, setTab] = useState("system");
