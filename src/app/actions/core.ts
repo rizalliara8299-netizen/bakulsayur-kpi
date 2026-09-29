@@ -29,7 +29,6 @@ export async function createEmployee(formData: FormData) {
     name: text(formData, "name"),
     team_id: text(formData, "teamId"),
     status: text(formData, "status") || "active",
-    planned_role: text(formData, "plannedRole") || "employee",
     created_by: user.id,
     updated_by: user.id,
   });

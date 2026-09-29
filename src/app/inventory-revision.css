@@ -42,7 +42,7 @@
 .inventory-task-report > div { display:grid; gap:5px; }
 .inventory-task-report strong { font-size:12px; }
 .inventory-task-report span { color:#7a879a; font-size:10px; }
-.inventory-task-report b { color:#079bd6; font-size:18px; }
+.inventory-task-report b { color:#0b6f4d; font-size:18px; }
 .inventory-status { display:inline-flex; min-height:26px; align-items:center; padding:0 9px; border-radius:999px; font-size:9px; font-weight:900; color:#526176; background:#edf2f6; }
 .inventory-status.status-selesai,.inventory-status.status-tidak-ada-kebutuhan { color:#12734e; background:#e4f7ee; }
 .inventory-status.status-ada-kendala,.inventory-status.status-belum-selesai { color:#9d5b0d; background:#fff0d8; }

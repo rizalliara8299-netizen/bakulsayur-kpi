@@ -57,20 +57,9 @@ export function MasterCrudEnhancer() {
     }
 
     let cancelled = false;
-    Promise.all([
-      supabase.rpc("get_unified_app_bundle"),
-      supabase.from("employees").select("id,planned_role"),
-    ]).then(([bundleResult, roleResult]) => {
-      const { data, error } = bundleResult;
+    supabase.rpc("get_unified_app_bundle").then(({ data, error }) => {
       if (cancelled || error || !data?.admin) return;
-      const plannedRoles = Object.fromEntries((roleResult.data || []).map((row: any) => [row.id, row.planned_role || "employee"]));
-      setBundle({
-        ...data,
-        employees: (data.employees || []).map((employee: any) => ({
-          ...employee,
-          plannedRole: plannedRoles[employee.id] || "employee",
-        })),
-      });
+      setBundle(data);
     });
     return () => {
       cancelled = true;
@@ -226,7 +215,6 @@ export function MasterCrudEnhancer() {
           p_name: String(fd.get("name") || "").trim(),
           p_team_id: String(fd.get("teamId") || ""),
           p_status: String(fd.get("status") || "active"),
-          p_planned_role: String(fd.get("plannedRole") || "employee"),
         });
       }
 
@@ -296,7 +284,6 @@ export function MasterCrudEnhancer() {
                   <label><span>Kode Karyawan</span><input name="code" defaultValue={editor.item.code} required /></label>
                   <label><span>Nama Karyawan</span><input name="name" defaultValue={editor.item.name} required /></label>
                   <label><span>Tim</span><select name="teamId" defaultValue={editor.item.teamId} required>{(bundle.teams || []).map((team: any) => <option key={team.id} value={team.id}>{team.name}</option>)}</select></label>
-                  <label><span>Role Sistem (persiapan)</span><select name="plannedRole" defaultValue={editor.item.plannedRole || "employee"}><option value="employee">Karyawan</option><option value="admin">Admin — belum aktif</option></select></label>
                   <label><span>Status</span><select name="status" defaultValue={editor.item.status || "active"}><option value="active">Aktif</option><option value="inactive">Nonaktif</option></select></label>
                 </>
               )}
