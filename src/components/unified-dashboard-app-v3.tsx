@@ -71,8 +71,9 @@ export function UnifiedDashboardAppV3({ initialBundle, displayName, role, organi
   }
 
   useEffect(() => {
-    supabase.from("employees").select("id,planned_role").then(({ data }) => {
-      setPlannedRoles(Object.fromEntries((data || []).map((row: any) => [row.id, row.planned_role || "employee"])));
+    supabase.from("employees").select("id,planned_role").then((result: any) => {
+      const data = result?.data || [];
+      setPlannedRoles(Object.fromEntries(data.map((row: any) => [row.id, row.planned_role || "employee"])));
     });
   }, [supabase]);
   async function task(key: string, fn: () => Promise<{ error?: any }>, success: string) {
