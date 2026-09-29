@@ -10,6 +10,7 @@ import "./inventory-revision.css";
 import "./management-analytics.css";
 import "./brand-polish.css";
 import "./master-crud.css";
+import "./professional-dashboard.css";
 
 export const metadata: Metadata = {
   title: "KPI Bakul Sayur",
