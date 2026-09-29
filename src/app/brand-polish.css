@@ -1,12 +1,12 @@
 :root{
   --bs-green:#077348;
   --bs-green-2:#0a8b59;
-  --bs-sky:#39b7e5;
-  --bs-cyan:#31afe0;
-  --bs-teal:#24a9bc;
-  --bs-teal-dark:#165a70;
+  --bs-sky:#16845f;
+  --bs-cyan:#0b6f4d;
+  --bs-teal:#167653;
+  --bs-teal-dark:#234d3d;
   --bs-ink:#19221f;
-  --bs-canvas:#f3f7f9;
+  --bs-canvas:#f5f7f6;
 }
 
 body,.shell,.main{background:var(--bs-canvas)!important}
@@ -30,21 +30,21 @@ body,.shell,.main{background:var(--bs-canvas)!important}
 }
 .brand-logo-fallback span,.brand-logo-fallback b{display:none!important}
 
-/* Primary visual language remains the original cyan/blue. Green is reserved for brand + positive status. */
+/* Unified brand language: forest green, warm neutral surfaces, and restrained semantic colors. */
 .sidebar{background:#1c211f!important}
 .nav-item.active{
   background:linear-gradient(135deg,var(--bs-sky),var(--bs-teal))!important;
-  box-shadow:0 11px 28px rgba(40,177,200,.24)!important;
+  box-shadow:0 11px 28px rgba(11,111,77,.22)!important;
 }
 .legacy-hero{
-  background:linear-gradient(120deg,#39b8e5 0%,#34b5df 56%,#29aebe 100%)!important;
+  background:linear-gradient(120deg,#0b6f4d 0%,#12845d 56%,#1a7457 100%)!important;
 }
 .admin-avatar{color:var(--bs-teal-dark)!important}
 .btn-primary{
   background:linear-gradient(135deg,var(--bs-cyan),var(--bs-teal))!important;
-  box-shadow:0 8px 20px rgba(36,169,188,.20)!important;
+  box-shadow:0 8px 20px rgba(11,111,77,.18)!important;
 }
-.btn-soft{color:#176d82!important;background:#e8f7fb!important}
+.btn-soft{color:#0b6f4d!important;background:#edf6f1!important}
 
 /* Prevent summary cards from clipping labels/actions at narrow card widths. */
 .metric-card{min-width:0!important}
@@ -63,47 +63,47 @@ body,.shell,.main{background:var(--bs-canvas)!important}
 }
 .metric-card>span{line-height:1.36!important}
 .metric-card>small{display:block!important;line-height:1.42!important;padding-right:0!important}
-.metric-card.inventory-featured{border-color:#89d7f1!important}
-.metric-card.inventory-featured .metric-icon{background:#def4fb!important;color:#128fbd!important}
-.metric-card.inventory-featured>small{color:#1287ae!important}
+.metric-card.inventory-featured{border-color:#cfe5d9!important}
+.metric-card.inventory-featured .metric-icon{background:#e8f4ee!important;color:#0b6f4d!important}
+.metric-card.inventory-featured>small{color:#0b6f4d!important}
 
-/* Analytics palette: cool teal/cyan, with green only where the meaning is positive. */
-.analytics-health-card{background:linear-gradient(145deg,#17485c,#16788a)!important}
-.analytics-health-card>span,.analytics-health-card>p{color:#d9f1f5!important}
-.analytics-health-card>strong small{color:#c4e8ed!important}
+/* Analytics follows the same green-neutral system; semantic warning/error colors remain distinct. */
+.analytics-health-card{background:linear-gradient(145deg,#173b2f,#245d48)!important}
+.analytics-health-card>span,.analytics-health-card>p{color:#d9eee5!important}
+.analytics-health-card>strong small{color:#c7e5d8!important}
 .health-track{background:rgba(255,255,255,.22)!important}
-.health-track i{background:#73d9e0!important}
+.health-track i{background:#72d3ab!important}
 .analytics-final-banner{
-  border-color:#d6e9ee!important;
-  background:linear-gradient(135deg,#f4fbfd,#eef8fa)!important;
+  border-color:#d7e7de!important;
+  background:linear-gradient(135deg,#f5faf7,#eef6f2)!important;
 }
-.analytics-final-banner.closed{background:linear-gradient(135deg,#eef9fb,#e7f4f7)!important;border-color:#c7e3e9!important}
-.analytics-final-banner.open{background:linear-gradient(135deg,#f7fbfc,#f1f7f8)!important}
+.analytics-final-banner.closed{background:linear-gradient(135deg,#eef8f3,#e7f3ed)!important;border-color:#c9e1d4!important}
+.analytics-final-banner.open{background:linear-gradient(135deg,#f8faf9,#f2f6f4)!important}
 .analytics-final-banner span,.analytics-final-banner strong,
 .analytics-period-chip,.analytics-kpi-breakdown article>b,
 .profile-main span,.profile-rank strong,.profile-kpi-grid article strong{
-  color:#176f84!important;
+  color:#0b6f4d!important;
 }
-.analytics-period-chip{background:#eaf7fa!important}
+.analytics-period-chip{background:#edf6f1!important}
 .analytics-export-actions button.primary{background:linear-gradient(135deg,var(--bs-cyan),var(--bs-teal))!important;border-color:var(--bs-teal)!important}
-.analytics-message{border-color:#cfe8ee!important;background:#f0f9fb!important;color:#17677a!important}
-.analytics-rank.first{background:#e4f5fa!important;color:#13728b!important}
-.profile-avatar{background:linear-gradient(145deg,#2eb4d8,#239eb3)!important}
-.trend-track i{background:linear-gradient(180deg,#47c2db,#259bb5)!important}
-.quality-list progress::-webkit-progress-value{background:#27a6bb!important}
-.executive-sentence b{color:#17677a!important}
-.analysis-detail-grid p b,.employee-insight-list p b{background:#e7f5f8!important;color:#176f84!important}
-.analytics-closing-info{background:#f0f8fa!important;border-color:#d3e8ed!important}
-.analytics-closing-info strong{color:#176f84!important}
+.analytics-message{border-color:#d3e7dc!important;background:#f1f8f4!important;color:#1b654b!important}
+.analytics-rank.first{background:#e6f4ec!important;color:#0b6f4d!important}
+.profile-avatar{background:linear-gradient(145deg,#0f8a61,#1a7658)!important}
+.trend-track i{background:linear-gradient(180deg,#3ab785,#167653)!important}
+.quality-list progress::-webkit-progress-value{background:#1b9368!important}
+.executive-sentence b{color:#1b654b!important}
+.analysis-detail-grid p b,.employee-insight-list p b{background:#e8f4ee!important;color:#0b6f4d!important}
+.analytics-closing-info{background:#f1f8f4!important;border-color:#d4e7dc!important}
+.analytics-closing-info strong{color:#0b6f4d!important}
 .analytics-closing-info p{color:#5b6870!important}
 /* Semantic success remains green, so it reads as status rather than a competing theme. */
 .analytics-delta.good{background:#e6f6ee!important;color:var(--bs-green)!important}
 .executive-three .strength{background:#f4fbf8!important;border-color:#dcefe7!important}
 .executive-three .strength h3{color:var(--bs-green)!important}
 
-/* Neutral card edges and shadows keep cyan + teal cohesive. */
-.card,.metric-card,.kpi-card,.analytics-kpi-grid article,.profile-metric-grid article{border-color:#e3ebee!important}
-.analytics-panel,.analytics-executive,.profile-hero{box-shadow:0 12px 34px rgba(29,61,75,.055)!important}
+/* Neutral card edges and subtle green-tinted shadows keep the interface cohesive. */
+.card,.metric-card,.kpi-card,.analytics-kpi-grid article,.profile-metric-grid article{border-color:#e3eae6!important}
+.analytics-panel,.analytics-executive,.profile-hero{box-shadow:0 12px 34px rgba(18,48,34,.055)!important}
 
 /* Mobile/tablet sidebar: compact brand at left, horizontally scrollable navigation at right. */
 @media(max-width:920px){
@@ -170,7 +170,7 @@ body,.shell,.main{background:var(--bs-canvas)!important}
   .legacy-brand{width:84px!important;min-height:50px!important;height:50px!important}
   .brand-logo-fallback{width:79px!important;height:49px!important}
   .nav-item{min-height:38px!important;height:38px!important;padding:0 11px!important;font-size:12px!important}
-  .legacy-hero{background:linear-gradient(135deg,#38b7e3,#2eaec3)!important}
+  .legacy-hero{background:linear-gradient(135deg,#0b6f4d,#16845f)!important}
   .metric-card>small{font-size:10.5px!important}
 }
 
