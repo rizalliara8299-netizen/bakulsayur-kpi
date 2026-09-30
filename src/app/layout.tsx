@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   manifest: "/manifest.webmanifest",
   icons: {
     icon: [{ url: "/kpi-app-icon.svg", type: "image/svg+xml", sizes: "any" }],
-    apple: [{ url: "/kpi-app-icon.svg", type: "image/svg+xml" }],
+    apple: [{ url: "/kpi-icon-192.png", type: "image/png", sizes: "192x192" }],
   },
 };
 

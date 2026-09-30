@@ -1,6 +1,6 @@
 const SHELL="kpi-bakul-shell-v1";
 const RUNTIME="kpi-bakul-runtime-v1";
-const PRECACHE=["/offline.html","/manifest.webmanifest","/kpi-app-icon.svg","/bakul-sayur-logo.svg"];
+const PRECACHE=["/offline.html","/manifest.webmanifest","/kpi-app-icon.svg","/kpi-icon-192.png","/kpi-icon-512.png","/bakul-sayur-logo.svg"];
 self.addEventListener("install",event=>{event.waitUntil(caches.open(SHELL).then(cache=>cache.addAll(PRECACHE)).then(()=>self.skipWaiting()))});
 self.addEventListener("activate",event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>![SHELL,RUNTIME].includes(key)).map(key=>caches.delete(key)))).then(()=>self.clients.claim()))});
 self.addEventListener("message",event=>{if(event.data?.type==="CLEAR_PRIVATE"){event.waitUntil(caches.delete(RUNTIME).then(()=>caches.open(RUNTIME)))}});
