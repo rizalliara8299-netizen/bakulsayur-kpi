@@ -11,6 +11,7 @@ const legacyFeaturePrefixes = [
 export async function proxy(request: NextRequest) {
   const path = request.nextUrl.pathname;
   const isPublicPwa =
+    path === "/pwa-start" ||
     path === "/manifest.webmanifest" ||
     path === "/sw.js" ||
     path === "/offline.html" ||

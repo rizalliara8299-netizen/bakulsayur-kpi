@@ -127,8 +127,8 @@ export function PwaManager() {
           <button className="kpi-install-compact" type="button" onClick={installApp} title="Install KPI Bakul Sayur">
             <span className="kpi-install-icon-wrap"><img src="/kpi-app-icon.svg" alt="" /></span>
             <span className="kpi-install-mini-copy">
-              <strong>{promptEvent ? "Install KPI" : "Pasang KPI"}</strong>
-              <small><i className={online ? "online" : "offline"} />{promptEvent ? "Siap install" : online ? "PWA aktif" : "Offline"}</small>
+              <strong>Install KPI</strong>
+              <small><i className={online ? "online" : "offline"} />{promptEvent ? "Siap dipasang" : online ? "Menyiapkan…" : "Offline"}</small>
             </span>
             <b aria-hidden="true">↓</b>
           </button>
@@ -147,10 +147,10 @@ export function PwaManager() {
             <span>INSTALL KPI DASHBOARD</span>
             <h2>{isIOS ? "Pasang di iPhone / iPad" : "Pasang KPI Bakul Sayur"}</h2>
             <p>{isIOS
-              ? "Safari menggunakan Add to Home Screen untuk memasang web app."
+              ? "Safari memasang web app melalui Add to Home Screen."
               : isBrave
-                ? "Brave dapat memasang PWA dari menu browser jika prompt native belum muncul."
-                : "Jika prompt native belum tersedia, gunakan menu browser untuk memasang aplikasi."}</p>
+                ? "Brave dapat menampilkan pilihan Install app dari menu browser setelah PWA selesai terdeteksi."
+                : "Browser belum memberikan prompt native pada sesi ini. Pastikan halaman selesai dimuat lalu gunakan Install app dari menu browser jika tersedia."}</p>
             <ol>
               {isIOS ? (
                 <>

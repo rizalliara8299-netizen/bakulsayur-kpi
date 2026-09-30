@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { logout } from "@/app/actions/auth";
 import { getBrowserSupabase } from "@/lib/supabase/browser";
 import { ManagementReportsPanel, PerformanceProfilesPanel } from "@/components/management-analytics";
@@ -24,17 +24,31 @@ const panelCopy: Record<Panel, { title: string; description: string }> = {
 
 const mobileQuick: Panel[] = ["dashboard", "input", "reports"];
 
-const menu: Array<{ id: Panel; label: string; icon: string }> = [
-  { id: "dashboard", label: "Dashboard", icon: "▦" },
-  { id: "input", label: "Input Harian", icon: "+" },
-  { id: "inventory-report", label: "Laporan Inventory", icon: "☑" },
-  { id: "attendance", label: "Kehadiran", icon: "◷" },
-  { id: "errors", label: "Kesalahan", icon: "!" },
-  { id: "ranking", label: "Peringkat & Profil", icon: "★" },
-  { id: "reports", label: "Monitoring & Laporan", icon: "▤" },
-  { id: "employees", label: "Karyawan", icon: "♙" },
-  { id: "settings", label: "Pengaturan", icon: "⚙" },
+const menu: Array<{ id: Panel; label: string }> = [
+  { id: "dashboard", label: "Dashboard" },
+  { id: "input", label: "Input Harian" },
+  { id: "inventory-report", label: "Laporan Inventory" },
+  { id: "attendance", label: "Kehadiran" },
+  { id: "errors", label: "Kesalahan" },
+  { id: "ranking", label: "Peringkat & Profil" },
+  { id: "reports", label: "Monitoring & Laporan" },
+  { id: "employees", label: "Karyawan" },
+  { id: "settings", label: "Pengaturan" },
 ];
+
+function PanelIcon({ id, size = 18 }: { id: Panel | "menu"; size?: number }) {
+  const common = { width: size, height: size, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.9, strokeLinecap: "round" as const, strokeLinejoin: "round" as const, "aria-hidden": true };
+  if (id === "dashboard") return <svg {...common}><rect x="3.5" y="3.5" width="7" height="7" rx="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="2"/><rect x="13.5" y="13.5" width="7" height="7" rx="2"/></svg>;
+  if (id === "input") return <svg {...common}><path d="M12 5v14M5 12h14"/></svg>;
+  if (id === "inventory-report") return <svg {...common}><path d="M7 4h10M7 8h10M7 12h6"/><path d="m14 17 2 2 4-5"/><rect x="3" y="3" width="18" height="18" rx="4"/></svg>;
+  if (id === "attendance") return <svg {...common}><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v5l3 2"/></svg>;
+  if (id === "errors") return <svg {...common}><path d="M12 3.8 21 20H3L12 3.8Z"/><path d="M12 9v4.5M12 17h.01"/></svg>;
+  if (id === "ranking") return <svg {...common}><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.2 6.4 20l1.1-6-4.5-4.4 6.2-.9L12 3Z"/></svg>;
+  if (id === "reports") return <svg {...common}><path d="M5 20V10M12 20V4M19 20v-7"/><path d="M3 20h18"/></svg>;
+  if (id === "employees") return <svg {...common}><circle cx="9" cy="8" r="3"/><path d="M3.8 19c.5-3.3 2.3-5 5.2-5s4.7 1.7 5.2 5"/><circle cx="17.5" cy="9" r="2.2"/><path d="M15.8 14.5c2.8-.4 4.6 1.1 4.9 4.5"/></svg>;
+  if (id === "settings") return <svg {...common}><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1l2-1.5-2-3.4-2.4 1A7 7 0 0 0 14.8 6L14.5 3h-5L9.2 6a7 7 0 0 0-1.7 1.1l-2.4-1-2 3.4L5.1 11a7 7 0 0 0 0 2l-2 1.5 2 3.4 2.4-1A7 7 0 0 0 9.2 18l.3 3h5l.3-3a7 7 0 0 0 1.7-1.1l2.4 1 2-3.4-2-1.5c.1-.3.1-.7.1-1Z"/></svg>;
+  return <svg {...common}><path d="M4 7h16M4 12h16M4 17h16"/></svg>;
+}
 
 function num(v: unknown) { return new Intl.NumberFormat("id-ID", { maximumFractionDigits: 2 }).format(Number(v || 0)); }
 function value(fd: FormData, key: string) { return String(fd.get(key) || "").trim(); }
@@ -60,6 +74,31 @@ export function UnifiedDashboardAppV3({ initialBundle, displayName, role, organi
   const canWrite = ["superadmin", "admin", "supervisor", "operator"].includes(role);
   const initials = (displayName || "Admin").split(/\s+/).filter(Boolean).slice(0, 2).map(x => x[0]?.toUpperCase()).join("") || "AD";
   const copy = panelCopy[panel];
+
+  useEffect(() => {
+    try {
+      const requested = new URLSearchParams(window.location.search).get("panel") as Panel | null;
+      if (requested && panelCopy[requested]) setPanel(requested);
+    } catch {}
+    try {
+      const cached = window.localStorage.getItem("bakul-kpi-bundle-v1");
+      if (!navigator.onLine && cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed?.bundle) setBundle(parsed.bundle);
+      }
+    } catch {}
+    const syncOnReconnect = () => { refreshBundle(true); };
+    window.addEventListener("online", syncOnReconnect);
+    return () => window.removeEventListener("online", syncOnReconnect);
+  }, []);
+
+  useEffect(() => {
+    try {
+      if (bundle && Object.keys(bundle).length) {
+        window.localStorage.setItem("bakul-kpi-bundle-v1", JSON.stringify({ bundle, savedAt: Date.now() }));
+      }
+    } catch {}
+  }, [bundle]);
 
   async function refreshBundle(silent = true) {
     if (typeof navigator !== "undefined" && !navigator.onLine) {
@@ -156,14 +195,14 @@ export function UnifiedDashboardAppV3({ initialBundle, displayName, role, organi
 
   return <div className="shell unified-shell">
     <aside className="sidebar unified-sidebar">
-      <div className="brand legacy-brand"><div className="brand-logo-fallback"><span>▱</span><b>Bakul Sayur</b></div></div>
-      <div className="mobile-kpi-centered-brand">
+      <div className="mobile-kpi-spacer" aria-hidden="true" />
+      <div className="kpi-brand-lockup">
         <img src="/kpi-app-icon.svg" alt="" />
         <div><strong>Bakul Sayur</strong><span>KPI Dashboard</span></div>
       </div>
-      <button type="button" className="mobile-kpi-menu-trigger" onClick={() => setMobileMenuOpen(true)} aria-label="Buka semua fitur"><span>Menu</span><b>☰</b></button>
+      <button type="button" className="mobile-kpi-menu-trigger" onClick={() => setMobileMenuOpen(true)} aria-label="Buka semua fitur"><PanelIcon id="menu" size={18}/></button>
       <div className="nav-caption">MENU UTAMA</div>
-      <nav className="primary-nav">{menu.map(item => <button key={item.id} type="button" onClick={() => switchPanel(item.id)} className={`nav-item unified-nav-button ${panel === item.id ? "active" : ""}`}><span className="nav-icon">{item.icon}</span><span>{item.label}</span></button>)}{isAdmin ? <><div className="nav-caption nav-caption-admin">ADMIN</div><button type="button" onClick={() => switchPanel("admin")} className={`nav-item unified-nav-button ${panel === "admin" ? "active" : ""}`}><span className="nav-icon">◆</span><span>Admin Control</span></button></> : null}</nav>
+      <nav className="primary-nav">{menu.map(item => <button key={item.id} type="button" onClick={() => switchPanel(item.id)} className={`nav-item unified-nav-button ${panel === item.id ? "active" : ""}`}><span className="nav-icon"><PanelIcon id={item.id}/></span><span>{item.label}</span></button>)}{isAdmin ? <><div className="nav-caption nav-caption-admin">ADMIN</div><button type="button" onClick={() => switchPanel("admin")} className={`nav-item unified-nav-button ${panel === "admin" ? "active" : ""}`}><span className="nav-icon"><PanelIcon id="settings"/></span><span>Admin Control</span></button></> : null}</nav>
       <div className="sidebar-foot"><strong>Bakul Sayur</strong><span>Management & KPI System</span></div>
     </aside>
     <main className="main unified-main">
@@ -187,11 +226,11 @@ export function UnifiedDashboardAppV3({ initialBundle, displayName, role, organi
       {mobileQuick.map(id => {
         const item = menu.find(entry => entry.id === id)!;
         return <button key={id} type="button" onClick={() => switchPanel(id)} className={panel === id ? "active" : ""}>
-          <span>{item.icon}</span><small>{id === "reports" ? "Laporan" : item.label.replace(" Harian", "")}</small>
+          <span><PanelIcon id={id} size={18}/></span><small>{id === "reports" ? "Laporan" : item.label.replace(" Harian", "")}</small>
         </button>;
       })}
       <button type="button" onClick={() => setMobileMenuOpen(true)} className={mobileMenuOpen ? "active" : ""}>
-        <span>☰</span><small>Menu</small>
+        <span><PanelIcon id="menu" size={18}/></span><small>Menu</small>
       </button>
     </nav>
 
@@ -203,10 +242,10 @@ export function UnifiedDashboardAppV3({ initialBundle, displayName, role, organi
         </div>
         <div className="mobile-kpi-sheet-grid">
           {menu.map(item => <button key={item.id} type="button" onClick={() => switchPanel(item.id)} className={panel === item.id ? "active" : ""}>
-            <span>{item.icon}</span><div><strong>{item.label}</strong><small>{panelCopy[item.id].description}</small></div>
+            <span><PanelIcon id={item.id} size={17}/></span><div><strong>{item.label}</strong><small>{panelCopy[item.id].description}</small></div>
           </button>)}
           {isAdmin ? <button type="button" onClick={() => switchPanel("admin")} className={panel === "admin" ? "active" : ""}>
-            <span>◆</span><div><strong>Admin Control</strong><small>Kontrol master, pengguna, arsip, pemulihan, dan audit.</small></div>
+            <span><PanelIcon id="settings" size={17}/></span><div><strong>Admin Control</strong><small>Kontrol master, pengguna, arsip, pemulihan, dan audit.</small></div>
           </button> : null}
         </div>
       </section>

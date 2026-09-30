@@ -1,6 +1,6 @@
-const SHELL="kpi-bakul-shell-v4";
-const RUNTIME="kpi-bakul-runtime-v4";
-const PRECACHE=["/offline.html","/manifest.webmanifest","/kpi-app-icon.svg","/kpi-icon-192.png","/kpi-icon-512.png","/bakul-sayur-logo.svg"];
+const SHELL="kpi-bakul-shell-v5";
+const RUNTIME="kpi-bakul-runtime-v5";
+const PRECACHE=["/pwa-start","/offline.html","/manifest.webmanifest","/kpi-app-icon.svg","/kpi-icon-192.png","/kpi-icon-512.png","/bakul-sayur-logo.svg"];
 
 self.addEventListener("install",event=>{
   event.waitUntil((async()=>{
@@ -75,6 +75,8 @@ async function navigationNetworkFirst(request){
     if(cached)return cached;
     const dashboard=await runtime.match("/dashboard")||await runtime.match("/dashboard?source=pwa");
     if(dashboard)return dashboard;
+    const start=await caches.match("/pwa-start");
+    if(start)return start;
     return (await caches.match("/offline.html"))||Response.error();
   }
 }

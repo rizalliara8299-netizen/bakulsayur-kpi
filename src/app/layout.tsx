@@ -56,7 +56,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
                   if (registration.waiting) {
                     registration.waiting.postMessage({ type: 'SKIP_WAITING' });
                   }
-                  var reloadKey = 'kpi-sw-controlled-v3';
+                  var reloadKey = 'kpi-sw-controlled-v5';
                   var reloadOnce = function() {
                     if (!navigator.serviceWorker.controller && !sessionStorage.getItem(reloadKey)) {
                       sessionStorage.setItem(reloadKey, '1');
