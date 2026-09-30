@@ -1,5 +1,5 @@
-const SHELL="kpi-bakul-shell-v2";
-const RUNTIME="kpi-bakul-runtime-v2";
+const SHELL="kpi-bakul-shell-v3";
+const RUNTIME="kpi-bakul-runtime-v3";
 const PRECACHE=["/offline.html","/manifest.webmanifest","/kpi-app-icon.svg","/kpi-icon-192.png","/kpi-icon-512.png","/bakul-sayur-logo.svg"];
 
 self.addEventListener("install",event=>{
@@ -20,6 +20,10 @@ self.addEventListener("activate",event=>{
     const keys=await caches.keys();
     await Promise.all(keys.filter(key=>![SHELL,RUNTIME].includes(key)).map(key=>caches.delete(key)));
     await self.clients.claim();
+    const clients=await self.clients.matchAll({type:"window"});
+    for(const client of clients){
+      client.postMessage({type:"SW_ACTIVE"});
+    }
   })());
 });
 

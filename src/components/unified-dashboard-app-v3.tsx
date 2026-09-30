@@ -22,6 +22,8 @@ const panelCopy: Record<Panel, { title: string; description: string }> = {
   admin: { title: "Admin Control Center.", description: "Kontrol seluruh data, master checklist, akses, arsip, pemulihan, dan audit." },
 };
 
+const mobileQuick: Panel[] = ["dashboard", "input", "reports"];
+
 const menu: Array<{ id: Panel; label: string; icon: string }> = [
   { id: "dashboard", label: "Dashboard", icon: "▦" },
   { id: "input", label: "Input Harian", icon: "+" },
@@ -46,6 +48,7 @@ export function UnifiedDashboardAppV3({ initialBundle, displayName, role, organi
   const [inputTab, setInputTab] = useState<InputTab>("production");
   const [busy, setBusy] = useState<string | null>(null);
   const [toast, setToast] = useState<{ type: "ok" | "err"; text: string } | null>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const today = String(bundle.today || new Date().toISOString().slice(0, 10));
   const monthStart = today.slice(0, 7) + "-01";
   const [invStart, setInvStart] = useState(monthStart);
@@ -78,7 +81,11 @@ export function UnifiedDashboardAppV3({ initialBundle, displayName, role, organi
     catch (error: any) { setToast({ type: "err", text: error?.message || "Operasi gagal" }); }
     finally { setBusy(null); }
   }
-  function switchPanel(next: Panel) { setPanel(next); window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior }); }
+  function switchPanel(next: Panel) {
+    setPanel(next);
+    setMobileMenuOpen(false);
+    window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
+  }
 
   const employees = bundle.employees || [];
   const productionEmployees = employees.filter((e: any) => e.status === "active" && e.team === "Produksi");
@@ -150,6 +157,8 @@ export function UnifiedDashboardAppV3({ initialBundle, displayName, role, organi
   return <div className="shell unified-shell">
     <aside className="sidebar unified-sidebar">
       <div className="brand legacy-brand"><div className="brand-logo-fallback"><span>▱</span><b>Bakul Sayur</b></div></div>
+      <div className="mobile-kpi-brand-copy"><strong>KPI Bakul Sayur</strong><span>{menu.find(item => item.id === panel)?.label || "Dashboard"}</span></div>
+      <button type="button" className="mobile-kpi-menu-trigger" onClick={() => setMobileMenuOpen(true)} aria-label="Buka semua fitur"><span>Menu</span><b>☰</b></button>
       <div className="nav-caption">MENU UTAMA</div>
       <nav className="primary-nav">{menu.map(item => <button key={item.id} type="button" onClick={() => switchPanel(item.id)} className={`nav-item unified-nav-button ${panel === item.id ? "active" : ""}`}><span className="nav-icon">{item.icon}</span><span>{item.label}</span></button>)}{isAdmin ? <><div className="nav-caption nav-caption-admin">ADMIN</div><button type="button" onClick={() => switchPanel("admin")} className={`nav-item unified-nav-button ${panel === "admin" ? "active" : ""}`}><span className="nav-icon">◆</span><span>Admin Control</span></button></> : null}</nav>
       <div className="sidebar-foot"><strong>Bakul Sayur</strong><span>Management & KPI System</span></div>
@@ -170,6 +179,35 @@ export function UnifiedDashboardAppV3({ initialBundle, displayName, role, organi
         {panel === "admin" && isAdmin ? <AdminPanel bundle={bundle} busy={busy} recordAction={adminRecord} bulkAction={adminBulk} switchPanel={switchPanel} /> : null}
       </div>
     </main>
+
+    <nav className="mobile-kpi-bottom-nav" aria-label="Navigasi utama mobile">
+      {mobileQuick.map(id => {
+        const item = menu.find(entry => entry.id === id)!;
+        return <button key={id} type="button" onClick={() => switchPanel(id)} className={panel === id ? "active" : ""}>
+          <span>{item.icon}</span><small>{id === "reports" ? "Laporan" : item.label.replace(" Harian", "")}</small>
+        </button>;
+      })}
+      <button type="button" onClick={() => setMobileMenuOpen(true)} className={mobileMenuOpen ? "active" : ""}>
+        <span>☰</span><small>Menu</small>
+      </button>
+    </nav>
+
+    {mobileMenuOpen ? <div className="mobile-kpi-sheet-backdrop" onClick={() => setMobileMenuOpen(false)}>
+      <section className="mobile-kpi-sheet" onClick={event => event.stopPropagation()} aria-label="Semua fitur">
+        <div className="mobile-kpi-sheet-head">
+          <div><span>BAKUL SAYUR</span><strong>Semua Fitur KPI</strong></div>
+          <button type="button" onClick={() => setMobileMenuOpen(false)} aria-label="Tutup">×</button>
+        </div>
+        <div className="mobile-kpi-sheet-grid">
+          {menu.map(item => <button key={item.id} type="button" onClick={() => switchPanel(item.id)} className={panel === item.id ? "active" : ""}>
+            <span>{item.icon}</span><div><strong>{item.label}</strong><small>{panelCopy[item.id].description}</small></div>
+          </button>)}
+          {isAdmin ? <button type="button" onClick={() => switchPanel("admin")} className={panel === "admin" ? "active" : ""}>
+            <span>◆</span><div><strong>Admin Control</strong><small>Kontrol master, pengguna, arsip, pemulihan, dan audit.</small></div>
+          </button> : null}
+        </div>
+      </section>
+    </div> : null}
   </div>;
 }
 

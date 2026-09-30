@@ -18,7 +18,6 @@ export const metadata: Metadata = {
   applicationName: "KPI Bakul Sayur",
   title: "KPI Bakul Sayur",
   description: "Manajemen KPI Produksi, checklist Inventory, monitoring bulanan, analisis, kehadiran, dan evaluasi Bakul Sayur",
-  manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
     title: "KPI Bakul Sayur",
@@ -53,7 +52,24 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
                 window.dispatchEvent(new Event('kpi-install-ready'));
               });
               if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function(){});
+                navigator.serviceWorker.register('/sw.js', { scope: '/' }).then(function(registration) {
+                  if (registration.waiting) {
+                    registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+                  }
+                  var reloadKey = 'kpi-sw-controlled-v3';
+                  var reloadOnce = function() {
+                    if (!navigator.serviceWorker.controller && !sessionStorage.getItem(reloadKey)) {
+                      sessionStorage.setItem(reloadKey, '1');
+                      window.location.reload();
+                    }
+                  };
+                  navigator.serviceWorker.ready.then(function() {
+                    setTimeout(reloadOnce, 150);
+                  }).catch(function(){});
+                  navigator.serviceWorker.addEventListener('controllerchange', function() {
+                    window.dispatchEvent(new Event('kpi-sw-ready'));
+                  }, { once: true });
+                }).catch(function(){});
               }
             `,
           }}

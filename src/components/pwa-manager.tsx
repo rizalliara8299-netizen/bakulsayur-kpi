@@ -24,12 +24,18 @@ function iosDevice() {
   return /iphone|ipad|ipod/i.test(navigator.userAgent);
 }
 
+function braveDevice() {
+  if (typeof navigator === "undefined") return false;
+  return Boolean((navigator as Navigator & { brave?: unknown }).brave);
+}
+
 export function PwaManager() {
   const [online, setOnline] = useState(true);
   const [installed, setInstalled] = useState(false);
   const [promptEvent, setPromptEvent] = useState<InstallPromptEvent | null>(null);
   const [guideOpen, setGuideOpen] = useState(false);
   const isIOS = useMemo(() => iosDevice(), []);
+  const isBrave = useMemo(() => braveDevice(), []);
 
   useEffect(() => {
     setOnline(navigator.onLine);
@@ -44,6 +50,7 @@ export function PwaManager() {
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.register("/sw.js", { scope: "/" }).then(async (registration) => {
         registration.update().catch(() => undefined);
+        if (registration.waiting) registration.waiting.postMessage({ type: "SKIP_WAITING" });
         const ready = await navigator.serviceWorker.ready;
         const worker = ready.active || registration.active;
         worker?.postMessage({
@@ -120,8 +127,8 @@ export function PwaManager() {
           <button className="kpi-install-compact" type="button" onClick={installApp} title="Install KPI Bakul Sayur">
             <span className="kpi-install-icon-wrap"><img src="/kpi-app-icon.svg" alt="" /></span>
             <span className="kpi-install-mini-copy">
-              <strong>Install KPI</strong>
-              <small><i className={online ? "online" : "offline"} />{online ? "Siap offline" : "Offline"}</small>
+              <strong>{promptEvent ? "Install KPI" : "Pasang KPI"}</strong>
+              <small><i className={online ? "online" : "offline"} />{promptEvent ? "Siap install" : online ? "Siap offline" : "Offline"}</small>
             </span>
             <b aria-hidden="true">↓</b>
           </button>
@@ -141,7 +148,9 @@ export function PwaManager() {
             <h2>{isIOS ? "Pasang di iPhone / iPad" : "Pasang KPI Bakul Sayur"}</h2>
             <p>{isIOS
               ? "Safari menggunakan Add to Home Screen untuk memasang web app."
-              : "Jika tombol native belum tersedia, gunakan menu browser untuk memasang aplikasi."}</p>
+              : isBrave
+                ? "Brave dapat memasang PWA dari menu browser jika prompt native belum muncul."
+                : "Jika prompt native belum tersedia, gunakan menu browser untuk memasang aplikasi."}</p>
             <ol>
               {isIOS ? (
                 <>
@@ -151,9 +160,9 @@ export function PwaManager() {
                 </>
               ) : (
                 <>
-                  <li>Pastikan halaman dibuka dengan Chrome/Edge dan koneksi aktif sekali.</li>
-                  <li>Buka menu browser lalu pilih <strong>Install app</strong> atau <strong>Add to Home Screen</strong>.</li>
-                  <li>Setelah terpasang, dashboard dapat dibuka dari ikon KPI Bakul Sayur.</li>
+                  <li>Pastikan halaman ini sudah selesai dimuat satu kali dengan koneksi aktif.</li>
+                  <li>{isBrave ? <>Di Brave, buka menu browser lalu pilih <strong>Install KPI Bakul Sayur</strong> / <strong>Install app</strong>.</> : <>Buka menu browser lalu pilih <strong>Install app</strong> atau <strong>Add to Home Screen</strong>.</>}</li>
+                  <li>Setelah terpasang, buka aplikasi dari ikon KPI Bakul Sayur.</li>
                 </>
               )}
             </ol>
