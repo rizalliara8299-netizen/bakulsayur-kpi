@@ -1,0 +1,11 @@
+const SHELL="kpi-bakul-shell-v1";
+const RUNTIME="kpi-bakul-runtime-v1";
+const PRECACHE=["/offline.html","/manifest.webmanifest","/kpi-app-icon.svg","/bakul-sayur-logo.svg"];
+self.addEventListener("install",event=>{event.waitUntil(caches.open(SHELL).then(cache=>cache.addAll(PRECACHE)).then(()=>self.skipWaiting()))});
+self.addEventListener("activate",event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>![SHELL,RUNTIME].includes(key)).map(key=>caches.delete(key)))).then(()=>self.clients.claim()))});
+self.addEventListener("message",event=>{if(event.data?.type==="CLEAR_PRIVATE"){event.waitUntil(caches.delete(RUNTIME).then(()=>caches.open(RUNTIME)))}});
+function isAuthPath(path){return path.startsWith("/login")||path.startsWith("/register")||path.startsWith("/auth/")}
+function cacheableResponse(response){if(!response||!response.ok)return false;try{const path=new URL(response.url).pathname;return !isAuthPath(path)}catch{return false}}
+async function networkFirst(request,navigation=false){const runtime=await caches.open(RUNTIME);try{const response=await fetch(request);if(cacheableResponse(response))runtime.put(request,response.clone());return response}catch{const cached=await runtime.match(request);if(cached)return cached;if(navigation)return (await caches.match("/offline.html"))||Response.error();throw new Error("offline")}}
+async function staticCache(request){const shell=await caches.open(SHELL);const cached=await shell.match(request);if(cached){fetch(request).then(response=>{if(response.ok)shell.put(request,response.clone())}).catch(()=>{});return cached}const response=await fetch(request);if(response.ok)shell.put(request,response.clone());return response}
+self.addEventListener("fetch",event=>{const request=event.request;if(request.method!=="GET")return;const url=new URL(request.url);if(url.origin!==self.location.origin)return;if(isAuthPath(url.pathname)){event.respondWith(fetch(request));return}if(request.mode==="navigate"){event.respondWith(networkFirst(request,true));return}if(url.pathname.startsWith("/_next/static/")||url.pathname==="/manifest.webmanifest"||url.pathname.endsWith(".svg")||url.pathname.endsWith(".png")||url.pathname.endsWith(".ico")){event.respondWith(staticCache(request));return}event.respondWith(networkFirst(request,false).catch(()=>caches.match(request)))});

@@ -59,12 +59,20 @@ export function UnifiedDashboardAppV3({ initialBundle, displayName, role, organi
   const copy = panelCopy[panel];
 
   async function refreshBundle(silent = true) {
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      if (!silent) setToast({ type: "err", text: "Mode offline aktif. Data terakhir tetap dapat dilihat, tetapi sinkronisasi cloud menunggu koneksi." });
+      return false;
+    }
     const { data, error } = await supabase.rpc("get_unified_app_bundle");
     if (error) { if (!silent) setToast({ type: "err", text: error.message }); return false; }
     setBundle(data || {});
     return true;
   }
   async function task(key: string, fn: () => Promise<{ error?: any }>, success: string) {
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      setToast({ type: "err", text: "Anda sedang offline. Halaman dan data terakhir tetap dapat dilihat, tetapi perubahan baru harus menunggu koneksi internet." });
+      return;
+    }
     setBusy(key); setToast(null);
     try { const result = await fn(); if (result?.error) throw result.error; await refreshBundle(true); setToast({ type: "ok", text: success }); }
     catch (error: any) { setToast({ type: "err", text: error?.message || "Operasi gagal" }); }
@@ -147,7 +155,7 @@ export function UnifiedDashboardAppV3({ initialBundle, displayName, role, organi
       <div className="sidebar-foot"><strong>Bakul Sayur</strong><span>Management & KPI System</span></div>
     </aside>
     <main className="main unified-main">
-      <header className="hero legacy-hero"><div className="hero-copy"><h1>{panel === "dashboard" ? `Welcome back, ${displayName || "Admin"}!` : copy.title}</h1><p>{copy.description}</p></div><div className="hero-tools"><div className="admin-pill"><div className="admin-copy"><strong>Admin Panel</strong><span>{role === "superadmin" ? "Bakul Sayur" : role}</span></div><div className="admin-avatar">{initials}</div></div><form action={logout}><button className="hero-logout" type="submit" title="Keluar">↗</button></form></div></header>
+      <header className="hero legacy-hero"><div className="hero-copy"><h1>{panel === "dashboard" ? `Welcome back, ${displayName || "Admin"}!` : copy.title}</h1><p>{copy.description}</p></div><div className="hero-tools"><div className="admin-pill"><div className="admin-copy"><strong>Admin Panel</strong><span>{role === "superadmin" ? "Bakul Sayur" : role}</span></div><div className="admin-avatar">{initials}</div></div><form action={logout}><button className="hero-logout" type="submit" title="Keluar" onClick={() => navigator.serviceWorker?.controller?.postMessage({ type: "CLEAR_PRIVATE" })}>↗</button></form></div></header>
       {toast ? <div className={`unified-toast ${toast.type}`}>{toast.text}<button onClick={() => setToast(null)}>×</button></div> : null}
       <div className="content unified-content">
         {panel === "dashboard" ? <DashboardPanel summary={summary} dashboard={dashboard} inventory={inventory} tasks={tasks} inventoryEmployees={inventoryEmployees} today={today} switchPanel={switchPanel} /> : null}

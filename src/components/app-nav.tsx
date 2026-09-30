@@ -29,7 +29,7 @@ export function AppNav({ role }: { role: string }) {
 
   function schedulePrefetch(href: string) {
     if (hoverTimer.current) clearTimeout(hoverTimer.current);
-    hoverTimer.current = setTimeout(() => router.prefetch(href), 180);
+    hoverTimer.current = setTimeout(() => router.prefetch(href), 60);
   }
 
   function cancelPrefetch() {
@@ -42,11 +42,12 @@ export function AppNav({ role }: { role: string }) {
       <Link
         key={item.href}
         href={item.href}
-        prefetch={false}
+        prefetch={true}
         onMouseEnter={() => schedulePrefetch(item.href)}
         onMouseLeave={cancelPrefetch}
         onFocus={() => schedulePrefetch(item.href)}
         onBlur={cancelPrefetch}
+        onPointerDown={() => { if (!isActive) router.prefetch(item.href); }}
         onClick={() => { if (!isActive) setPending(true); }}
         className={`nav-item ${isActive ? "active" : ""}`}
       >
