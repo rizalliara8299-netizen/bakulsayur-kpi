@@ -157,7 +157,10 @@ export function UnifiedDashboardAppV3({ initialBundle, displayName, role, organi
   return <div className="shell unified-shell">
     <aside className="sidebar unified-sidebar">
       <div className="brand legacy-brand"><div className="brand-logo-fallback"><span>▱</span><b>Bakul Sayur</b></div></div>
-      <div className="mobile-kpi-brand-copy"><strong>KPI Bakul Sayur</strong><span>{menu.find(item => item.id === panel)?.label || "Dashboard"}</span></div>
+      <div className="mobile-kpi-centered-brand">
+        <img src="/kpi-app-icon.svg" alt="" />
+        <div><strong>Bakul Sayur</strong><span>KPI Dashboard</span></div>
+      </div>
       <button type="button" className="mobile-kpi-menu-trigger" onClick={() => setMobileMenuOpen(true)} aria-label="Buka semua fitur"><span>Menu</span><b>☰</b></button>
       <div className="nav-caption">MENU UTAMA</div>
       <nav className="primary-nav">{menu.map(item => <button key={item.id} type="button" onClick={() => switchPanel(item.id)} className={`nav-item unified-nav-button ${panel === item.id ? "active" : ""}`}><span className="nav-icon">{item.icon}</span><span>{item.label}</span></button>)}{isAdmin ? <><div className="nav-caption nav-caption-admin">ADMIN</div><button type="button" onClick={() => switchPanel("admin")} className={`nav-item unified-nav-button ${panel === "admin" ? "active" : ""}`}><span className="nav-icon">◆</span><span>Admin Control</span></button></> : null}</nav>

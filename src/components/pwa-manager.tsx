@@ -128,7 +128,7 @@ export function PwaManager() {
             <span className="kpi-install-icon-wrap"><img src="/kpi-app-icon.svg" alt="" /></span>
             <span className="kpi-install-mini-copy">
               <strong>{promptEvent ? "Install KPI" : "Pasang KPI"}</strong>
-              <small><i className={online ? "online" : "offline"} />{promptEvent ? "Siap install" : online ? "Siap offline" : "Offline"}</small>
+              <small><i className={online ? "online" : "offline"} />{promptEvent ? "Siap install" : online ? "PWA aktif" : "Offline"}</small>
             </span>
             <b aria-hidden="true">↓</b>
           </button>

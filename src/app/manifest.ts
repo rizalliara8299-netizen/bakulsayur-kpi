@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "KPI Bakul Sayur",
     short_name: "Bakul KPI",
     description: "Dashboard KPI, produksi, inventory, kehadiran, evaluasi, dan monitoring Bakul Sayur.",
-    start_url: "/dashboard",
+    start_url: "/login?source=pwa",
     display: "standalone",
     background_color: "#f7f9f6",
     theme_color: "#0b3b2d",

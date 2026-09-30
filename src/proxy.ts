@@ -9,6 +9,19 @@ const legacyFeaturePrefixes = [
 ];
 
 export async function proxy(request: NextRequest) {
+  const path = request.nextUrl.pathname;
+  const isPublicPwa =
+    path === "/manifest.webmanifest" ||
+    path === "/sw.js" ||
+    path === "/offline.html" ||
+    path === "/kpi-app-icon.svg" ||
+    path === "/kpi-icon-192.png" ||
+    path === "/kpi-icon-512.png" ||
+    path === "/bakul-sayur-logo.svg";
+
+  // PWA resources must never be redirected to auth.
+  if (isPublicPwa) return NextResponse.next();
+
   let response = NextResponse.next({ request });
   const supabase = createServerClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
     cookies: {
@@ -21,7 +34,6 @@ export async function proxy(request: NextRequest) {
     },
   });
   const { data } = await supabase.auth.getClaims();
-  const path = request.nextUrl.pathname;
   const isPublicAuth = path.startsWith("/login") || path.startsWith("/register") || path.startsWith("/auth/confirm");
 
   if (!data?.claims && !isPublicAuth) {
