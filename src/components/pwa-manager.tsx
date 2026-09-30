@@ -13,33 +13,47 @@ declare global {
   }
 }
 
-function standalone() {
+function isStandalone() {
   if (typeof window === "undefined") return false;
   return window.matchMedia("(display-mode: standalone)").matches ||
     Boolean((navigator as Navigator & { standalone?: boolean }).standalone);
 }
 
-function iosDevice() {
-  if (typeof navigator === "undefined") return false;
-  return /iphone|ipad|ipod/i.test(navigator.userAgent);
+function getBrowserInfo() {
+  if (typeof navigator === "undefined") {
+    return { android: false, ios: false, brave: false, chromeAndroid: false, samsung: false };
+  }
+  const ua = navigator.userAgent;
+  const android = /Android/i.test(ua);
+  const ios = /iPhone|iPad|iPod/i.test(ua);
+  const brave = Boolean((navigator as Navigator & { brave?: unknown }).brave);
+  const samsung = /SamsungBrowser/i.test(ua);
+  const chromeAndroid =
+    android &&
+    /Chrome\//i.test(ua) &&
+    !brave &&
+    !samsung &&
+    !/EdgA|OPR\//i.test(ua);
+  return { android, ios, brave, chromeAndroid, samsung };
 }
 
-function braveDevice() {
-  if (typeof navigator === "undefined") return false;
-  return Boolean((navigator as Navigator & { brave?: unknown }).brave);
+function openCurrentPageInChrome() {
+  const url = new URL(window.location.href);
+  const target = `${url.host}${url.pathname}${url.search}`;
+  window.location.href = `intent://${target}#Intent;scheme=https;package=com.android.chrome;end`;
 }
 
 export function PwaManager() {
+  const browser = useMemo(() => getBrowserInfo(), []);
   const [online, setOnline] = useState(true);
   const [installed, setInstalled] = useState(false);
   const [promptEvent, setPromptEvent] = useState<InstallPromptEvent | null>(null);
   const [guideOpen, setGuideOpen] = useState(false);
-  const isIOS = useMemo(() => iosDevice(), []);
-  const isBrave = useMemo(() => braveDevice(), []);
+  const [swReady, setSwReady] = useState(false);
 
   useEffect(() => {
     setOnline(navigator.onLine);
-    setInstalled(standalone());
+    setInstalled(isStandalone());
     document.body.classList.toggle("pwa-offline", !navigator.onLine);
 
     const captureEarlyPrompt = () => {
@@ -51,12 +65,22 @@ export function PwaManager() {
       navigator.serviceWorker.register("/sw.js", { scope: "/" }).then(async (registration) => {
         registration.update().catch(() => undefined);
         if (registration.waiting) registration.waiting.postMessage({ type: "SKIP_WAITING" });
+
         const ready = await navigator.serviceWorker.ready;
+        setSwReady(true);
         const worker = ready.active || registration.active;
         worker?.postMessage({
           type: "CACHE_CURRENT",
           url: window.location.pathname + window.location.search,
         });
+
+        if (browser.android && browser.chromeAndroid && !navigator.serviceWorker.controller) {
+          const key = "kpi-pwa-android-control-v6";
+          if (!sessionStorage.getItem(key)) {
+            sessionStorage.setItem(key, "1");
+            window.location.reload();
+          }
+        }
       }).catch(() => undefined);
     }
 
@@ -81,19 +105,12 @@ export function PwaManager() {
       window.__kpiInstallPrompt = null;
       setGuideOpen(false);
     };
-    const onDocumentClick = (event: MouseEvent) => {
-      const target = event.target as Element | null;
-      if (target?.closest(".hero-logout") && navigator.serviceWorker?.controller) {
-        navigator.serviceWorker.controller.postMessage({ type: "CLEAR_PRIVATE" });
-      }
-    };
 
     window.addEventListener("online", onOnline);
     window.addEventListener("offline", onOffline);
     window.addEventListener("beforeinstallprompt", onPrompt);
     window.addEventListener("kpi-install-ready", onEarlyPrompt);
     window.addEventListener("appinstalled", onInstalled);
-    document.addEventListener("click", onDocumentClick, true);
 
     return () => {
       window.removeEventListener("online", onOnline);
@@ -101,34 +118,71 @@ export function PwaManager() {
       window.removeEventListener("beforeinstallprompt", onPrompt);
       window.removeEventListener("kpi-install-ready", onEarlyPrompt);
       window.removeEventListener("appinstalled", onInstalled);
-      document.removeEventListener("click", onDocumentClick, true);
     };
-  }, []);
+  }, [browser.android, browser.chromeAndroid]);
 
   async function installApp() {
     if (installed) return;
-    const availablePrompt = promptEvent || window.__kpiInstallPrompt || null;
-    if (availablePrompt) {
-      await availablePrompt.prompt();
-      const choice = await availablePrompt.userChoice;
+
+    const nativePrompt = promptEvent || window.__kpiInstallPrompt || null;
+    if (nativePrompt) {
+      await nativePrompt.prompt();
+      const choice = await nativePrompt.userChoice;
       if (choice.outcome === "accepted") {
         setPromptEvent(null);
         window.__kpiInstallPrompt = null;
       }
       return;
     }
+
+    if (browser.android && !browser.chromeAndroid) {
+      openCurrentPageInChrome();
+      return;
+    }
+
+    if (browser.android && browser.chromeAndroid && "serviceWorker" in navigator) {
+      try {
+        const ready = await navigator.serviceWorker.ready;
+        if (!navigator.serviceWorker.controller) {
+          const key = "kpi-pwa-install-reload-v6";
+          if (!sessionStorage.getItem(key)) {
+            sessionStorage.setItem(key, "1");
+            window.location.reload();
+            return;
+          }
+        }
+        ready.active?.postMessage({
+          type: "CACHE_CURRENT",
+          url: window.location.pathname + window.location.search,
+        });
+      } catch {}
+    }
+
     setGuideOpen(true);
   }
+
+  const installTitle =
+    browser.android && !browser.chromeAndroid && !promptEvent
+      ? "Install via Chrome"
+      : "Install KPI";
+
+  const installStatus = promptEvent
+    ? "Siap dipasang"
+    : browser.android && !browser.chromeAndroid
+      ? "WebAPK lewat Chrome"
+      : swReady
+        ? "PWA siap"
+        : "Menyiapkan…";
 
   return (
     <>
       {!installed ? (
         <aside className="kpi-install-dock" aria-label="Install KPI Bakul Sayur">
-          <button className="kpi-install-compact" type="button" onClick={installApp} title="Install KPI Bakul Sayur">
+          <button className="kpi-install-compact" type="button" onClick={installApp} title={installTitle}>
             <span className="kpi-install-icon-wrap"><img src="/kpi-app-icon.svg" alt="" /></span>
             <span className="kpi-install-mini-copy">
-              <strong>Install KPI</strong>
-              <small><i className={online ? "online" : "offline"} />{promptEvent ? "Siap dipasang" : online ? "Menyiapkan…" : "Offline"}</small>
+              <strong>{installTitle}</strong>
+              <small><i className={online ? "online" : "offline"} />{installStatus}</small>
             </span>
             <b aria-hidden="true">↓</b>
           </button>
@@ -145,28 +199,38 @@ export function PwaManager() {
             <button className="kpi-install-close" type="button" onClick={() => setGuideOpen(false)} aria-label="Tutup">×</button>
             <img src="/kpi-app-icon.svg" alt="KPI Bakul Sayur" />
             <span>INSTALL KPI DASHBOARD</span>
-            <h2>{isIOS ? "Pasang di iPhone / iPad" : "Pasang KPI Bakul Sayur"}</h2>
-            <p>{isIOS
-              ? "Safari memasang web app melalui Add to Home Screen."
-              : isBrave
-                ? "Brave dapat menampilkan pilihan Install app dari menu browser setelah PWA selesai terdeteksi."
-                : "Browser belum memberikan prompt native pada sesi ini. Pastikan halaman selesai dimuat lalu gunakan Install app dari menu browser jika tersedia."}</p>
-            <ol>
-              {isIOS ? (
-                <>
-                  <li>Ketuk tombol <strong>Share</strong> di Safari.</li>
-                  <li>Pilih <strong>Add to Home Screen</strong>.</li>
-                  <li>Ketuk <strong>Add</strong>. Ikon KPI Bakul Sayur akan muncul di Home Screen.</li>
-                </>
-              ) : (
-                <>
-                  <li>Pastikan halaman ini sudah selesai dimuat satu kali dengan koneksi aktif.</li>
-                  <li>{isBrave ? <>Di Brave, buka menu browser lalu pilih <strong>Install KPI Bakul Sayur</strong> / <strong>Install app</strong>.</> : <>Buka menu browser lalu pilih <strong>Install app</strong> atau <strong>Add to Home Screen</strong>.</>}</li>
-                  <li>Setelah terpasang, buka aplikasi dari ikon KPI Bakul Sayur.</li>
-                </>
-              )}
-            </ol>
-            <button className="btn btn-primary kpi-install-ok" type="button" onClick={() => setGuideOpen(false)}>Mengerti</button>
+            <h2>{browser.ios ? "Pasang di iPhone / iPad" : "Install KPI Bakul Sayur"}</h2>
+
+            {browser.ios ? (
+              <>
+                <p>Di iPhone/iPad, PWA dipasang melalui Safari dan Add to Home Screen.</p>
+                <ol>
+                  <li>Buka halaman ini di <strong>Safari</strong>.</li>
+                  <li>Ketuk <strong>Share</strong> lalu <strong>Add to Home Screen</strong>.</li>
+                  <li>Ketuk <strong>Add</strong>.</li>
+                </ol>
+              </>
+            ) : browser.android && browser.chromeAndroid ? (
+              <>
+                <p>Chrome sudah menerima service worker, tetapi prompt native belum tersedia pada sesi ini.</p>
+                <ol>
+                  <li>Pastikan halaman selesai dimuat dengan internet aktif.</li>
+                  <li>Buka menu Chrome <strong>⋮ → Add to home screen → Install app</strong>.</li>
+                  <li>Jika yang muncul hanya <strong>Create shortcut</strong>, tutup tab lalu buka ulang setelah beberapa detik.</li>
+                </ol>
+              </>
+            ) : (
+              <>
+                <p>Untuk instalasi Android penuh sebagai WebAPK, buka halaman ini di Chrome.</p>
+                <button className="btn btn-primary kpi-install-ok" type="button" onClick={openCurrentPageInChrome}>
+                  Buka di Chrome
+                </button>
+              </>
+            )}
+
+            {(browser.ios || (browser.android && browser.chromeAndroid)) ? (
+              <button className="btn btn-primary kpi-install-ok" type="button" onClick={() => setGuideOpen(false)}>Mengerti</button>
+            ) : null}
           </div>
         </div>
       ) : null}

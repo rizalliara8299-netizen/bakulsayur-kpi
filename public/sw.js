@@ -1,5 +1,5 @@
-const SHELL="kpi-bakul-shell-v5";
-const RUNTIME="kpi-bakul-runtime-v5";
+const SHELL="kpi-bakul-shell-v6";
+const RUNTIME="kpi-bakul-runtime-v6";
 const PRECACHE=["/pwa-start","/offline.html","/manifest.webmanifest","/kpi-app-icon.svg","/kpi-icon-192.png","/kpi-icon-512.png","/bakul-sayur-logo.svg"];
 
 self.addEventListener("install",event=>{

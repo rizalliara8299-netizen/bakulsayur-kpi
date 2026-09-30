@@ -42,6 +42,9 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="id">
       <head>
+        <link rel="manifest" href="/manifest.webmanifest" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="application-name" content="KPI Bakul Sayur" />
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -56,7 +59,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
                   if (registration.waiting) {
                     registration.waiting.postMessage({ type: 'SKIP_WAITING' });
                   }
-                  var reloadKey = 'kpi-sw-controlled-v5';
+                  var reloadKey = 'kpi-sw-controlled-v6';
                   var reloadOnce = function() {
                     if (!navigator.serviceWorker.controller && !sessionStorage.getItem(reloadKey)) {
                       sessionStorage.setItem(reloadKey, '1');
