@@ -15,11 +15,21 @@ import "./professional-dashboard.css";
 import "./pwa-kpi-premium.css";
 
 export const metadata: Metadata = {
+  applicationName: "KPI Bakul Sayur",
   title: "KPI Bakul Sayur",
   description: "Manajemen KPI Produksi, checklist Inventory, monitoring bulanan, analisis, kehadiran, dan evaluasi Bakul Sayur",
   manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    title: "KPI Bakul Sayur",
+    statusBarStyle: "default",
+  },
   icons: {
-    icon: [{ url: "/kpi-app-icon.svg", type: "image/svg+xml", sizes: "any" }],
+    icon: [
+      { url: "/kpi-icon-192.png", type: "image/png", sizes: "192x192" },
+      { url: "/kpi-icon-512.png", type: "image/png", sizes: "512x512" },
+      { url: "/kpi-app-icon.svg", type: "image/svg+xml", sizes: "any" }
+    ],
     apple: [{ url: "/kpi-icon-192.png", type: "image/png", sizes: "192x192" }],
   },
 };
@@ -32,6 +42,23 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="id">
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.__kpiInstallPrompt = window.__kpiInstallPrompt || null;
+              window.addEventListener('beforeinstallprompt', function(event) {
+                event.preventDefault();
+                window.__kpiInstallPrompt = event;
+                window.dispatchEvent(new Event('kpi-install-ready'));
+              });
+              if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function(){});
+              }
+            `,
+          }}
+        />
+      </head>
       <body>
         {children}
         <PwaManager />

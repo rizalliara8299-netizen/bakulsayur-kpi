@@ -7,9 +7,16 @@ type InstallPromptEvent = Event & {
   userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
 };
 
+declare global {
+  interface Window {
+    __kpiInstallPrompt?: InstallPromptEvent | null;
+  }
+}
+
 function standalone() {
   if (typeof window === "undefined") return false;
-  return window.matchMedia("(display-mode: standalone)").matches || Boolean((navigator as Navigator & { standalone?: boolean }).standalone);
+  return window.matchMedia("(display-mode: standalone)").matches ||
+    Boolean((navigator as Navigator & { standalone?: boolean }).standalone);
 }
 
 function iosDevice() {
@@ -29,9 +36,20 @@ export function PwaManager() {
     setInstalled(standalone());
     document.body.classList.toggle("pwa-offline", !navigator.onLine);
 
+    const captureEarlyPrompt = () => {
+      if (window.__kpiInstallPrompt) setPromptEvent(window.__kpiInstallPrompt);
+    };
+    captureEarlyPrompt();
+
     if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("/sw.js", { scope: "/" }).then((registration) => {
+      navigator.serviceWorker.register("/sw.js", { scope: "/" }).then(async (registration) => {
         registration.update().catch(() => undefined);
+        const ready = await navigator.serviceWorker.ready;
+        const worker = ready.active || registration.active;
+        worker?.postMessage({
+          type: "CACHE_CURRENT",
+          url: window.location.pathname + window.location.search,
+        });
       }).catch(() => undefined);
     }
 
@@ -45,11 +63,15 @@ export function PwaManager() {
     };
     const onPrompt = (event: Event) => {
       event.preventDefault();
-      setPromptEvent(event as InstallPromptEvent);
+      const prompt = event as InstallPromptEvent;
+      window.__kpiInstallPrompt = prompt;
+      setPromptEvent(prompt);
     };
+    const onEarlyPrompt = () => captureEarlyPrompt();
     const onInstalled = () => {
       setInstalled(true);
       setPromptEvent(null);
+      window.__kpiInstallPrompt = null;
       setGuideOpen(false);
     };
     const onDocumentClick = (event: MouseEvent) => {
@@ -62,12 +84,15 @@ export function PwaManager() {
     window.addEventListener("online", onOnline);
     window.addEventListener("offline", onOffline);
     window.addEventListener("beforeinstallprompt", onPrompt);
+    window.addEventListener("kpi-install-ready", onEarlyPrompt);
     window.addEventListener("appinstalled", onInstalled);
     document.addEventListener("click", onDocumentClick, true);
+
     return () => {
       window.removeEventListener("online", onOnline);
       window.removeEventListener("offline", onOffline);
       window.removeEventListener("beforeinstallprompt", onPrompt);
+      window.removeEventListener("kpi-install-ready", onEarlyPrompt);
       window.removeEventListener("appinstalled", onInstalled);
       document.removeEventListener("click", onDocumentClick, true);
     };
@@ -75,10 +100,14 @@ export function PwaManager() {
 
   async function installApp() {
     if (installed) return;
-    if (promptEvent) {
-      await promptEvent.prompt();
-      const choice = await promptEvent.userChoice;
-      if (choice.outcome === "accepted") setPromptEvent(null);
+    const availablePrompt = promptEvent || window.__kpiInstallPrompt || null;
+    if (availablePrompt) {
+      await availablePrompt.prompt();
+      const choice = await availablePrompt.userChoice;
+      if (choice.outcome === "accepted") {
+        setPromptEvent(null);
+        window.__kpiInstallPrompt = null;
+      }
       return;
     }
     setGuideOpen(true);
@@ -88,17 +117,18 @@ export function PwaManager() {
     <>
       {!installed ? (
         <aside className="kpi-install-dock" aria-label="Install KPI Bakul Sayur">
-          <div className="kpi-install-icon-wrap"><img src="/kpi-app-icon.svg" alt="" /></div>
-          <div className="kpi-install-copy">
-            <span>KPI BAKUL SAYUR APP</span>
-            <strong>Pasang dashboard di perangkat</strong>
-            <small><i className={online ? "online" : "offline"} />{online ? "Cloud aktif · siap offline" : "Mode offline · data terakhir tersedia"}</small>
-          </div>
-          <button type="button" onClick={installApp}>{isIOS ? "Pasang Aplikasi" : "Install Aplikasi"} <b>↓</b></button>
+          <button className="kpi-install-compact" type="button" onClick={installApp} title="Install KPI Bakul Sayur">
+            <span className="kpi-install-icon-wrap"><img src="/kpi-app-icon.svg" alt="" /></span>
+            <span className="kpi-install-mini-copy">
+              <strong>Install KPI</strong>
+              <small><i className={online ? "online" : "offline"} />{online ? "Siap offline" : "Offline"}</small>
+            </span>
+            <b aria-hidden="true">↓</b>
+          </button>
         </aside>
       ) : (
         <div className={"kpi-network-pill " + (online ? "online" : "offline")} aria-live="polite">
-          <i />{online ? "Cloud tersinkron" : "Mode offline"}
+          <i />{online ? "Cloud aktif" : "Offline"}
         </div>
       )}
 
@@ -109,7 +139,9 @@ export function PwaManager() {
             <img src="/kpi-app-icon.svg" alt="KPI Bakul Sayur" />
             <span>INSTALL KPI DASHBOARD</span>
             <h2>{isIOS ? "Pasang di iPhone / iPad" : "Pasang KPI Bakul Sayur"}</h2>
-            <p>{isIOS ? "Safari menggunakan Add to Home Screen untuk memasang web app." : "Jika prompt install browser belum muncul, pasang lewat menu browser."}</p>
+            <p>{isIOS
+              ? "Safari menggunakan Add to Home Screen untuk memasang web app."
+              : "Jika tombol native belum tersedia, gunakan menu browser untuk memasang aplikasi."}</p>
             <ol>
               {isIOS ? (
                 <>
@@ -119,9 +151,9 @@ export function PwaManager() {
                 </>
               ) : (
                 <>
-                  <li>Buka menu browser.</li>
-                  <li>Pilih <strong>Install app</strong> atau <strong>Add to Home Screen</strong>.</li>
-                  <li>Konfirmasi pemasangan KPI Bakul Sayur.</li>
+                  <li>Pastikan halaman dibuka dengan Chrome/Edge dan koneksi aktif sekali.</li>
+                  <li>Buka menu browser lalu pilih <strong>Install app</strong> atau <strong>Add to Home Screen</strong>.</li>
+                  <li>Setelah terpasang, dashboard dapat dibuka dari ikon KPI Bakul Sayur.</li>
                 </>
               )}
             </ol>

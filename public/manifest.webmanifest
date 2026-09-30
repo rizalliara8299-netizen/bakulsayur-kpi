@@ -3,7 +3,7 @@
   "short_name": "Bakul KPI",
   "description": "Dashboard KPI, produksi, inventory, kehadiran, evaluasi, dan monitoring Bakul Sayur.",
   "id": "/",
-  "start_url": "/dashboard",
+  "start_url": "/dashboard?source=pwa",
   "scope": "/",
   "display": "standalone",
   "display_override": [
@@ -55,5 +55,10 @@
       "short_name": "Laporan",
       "url": "/reports"
     }
+  ],
+  "prefer_related_applications": false,
+  "categories": [
+    "business",
+    "productivity"
   ]
 }
