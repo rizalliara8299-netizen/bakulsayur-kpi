@@ -1,3 +1,4 @@
+import { AttendanceAdminTools, AttendanceZoneEditor } from "@/components/attendance-admin-tools";
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
@@ -89,7 +90,11 @@ export function UnifiedDashboardAppV3({ initialBundle, displayName, role, organi
     } catch {}
     const syncOnReconnect = () => { refreshBundle(true); };
     window.addEventListener("online", syncOnReconnect);
-    return () => window.removeEventListener("online", syncOnReconnect);
+    const onFocus = () => { if (navigator.onLine && document.visibilityState === "visible") void refreshBundle(true); };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
+    const timer = window.setInterval(onFocus, 45000);
+    return () => { window.removeEventListener("online", syncOnReconnect); window.removeEventListener("focus", onFocus); document.removeEventListener("visibilitychange", onFocus); window.clearInterval(timer); };
   }, []);
 
   useEffect(() => {
@@ -116,7 +121,7 @@ export function UnifiedDashboardAppV3({ initialBundle, displayName, role, organi
       return;
     }
     setBusy(key); setToast(null);
-    try { const result = await fn(); if (result?.error) throw result.error; await refreshBundle(true); setToast({ type: "ok", text: success }); }
+    try { const result = await fn(); if (result?.error) throw result.error; const synced = await refreshBundle(false); if (!synced) throw new Error("Perubahan dikirim, tetapi data terbaru belum bisa disinkronkan."); setToast({ type: "ok", text: success }); }
     catch (error: any) { setToast({ type: "err", text: error?.message || "Operasi gagal" }); }
     finally { setBusy(null); }
   }
@@ -212,12 +217,12 @@ export function UnifiedDashboardAppV3({ initialBundle, displayName, role, organi
         {panel === "dashboard" ? <DashboardPanel summary={summary} dashboard={dashboard} inventory={inventory} tasks={tasks} inventoryEmployees={inventoryEmployees} today={today} switchPanel={switchPanel} /> : null}
         {panel === "input" ? <InputPanel tab={inputTab} setTab={setInputTab} canWrite={canWrite} isAdmin={isAdmin} today={today} productionEmployees={productionEmployees} inventoryEmployees={inventoryEmployees} kpis={kpis} tasks={tasks} production={production} inventory={inventory} busy={busy} submitProduction={submitProduction} checkDate={checkDate} setCheckDate={setCheckDate} checkEmployee={checkEmployee} setCheckEmployee={setCheckEmployee} markInventory={markInventory} deleteRecord={adminRecord} /> : null}
         {panel === "inventory-report" ? <InventoryReportPanel rows={inventoryReportRows} tasks={tasks} employees={inventoryEmployees} start={invStart} end={invEnd} employee={invEmployee} setStart={setInvStart} setEnd={setInvEnd} setEmployee={setInvEmployee} /> : null}
-        {panel === "attendance" ? <AttendancePanel canWrite={canWrite} today={today} employees={employees.filter((e: any) => e.status === "active")} rows={attendance} busy={busy} submit={submitAttendance} /> : null}
+        {panel === "attendance" ? <><AttendancePanel canWrite={canWrite} today={today} employees={employees.filter((e: any) => e.status === "active")} rows={[]} busy={busy} submit={submitAttendance} />{isAdmin ? <AttendanceAdminTools rows={attendance} employees={employees} refreshBundle={refreshBundle} setToast={setToast} /> : <div className="card panel"><h2>Riwayat Kehadiran</h2><div className="table-wrap"><table><thead><tr><th>Tanggal</th><th>Nama</th><th>Status</th><th>Jam</th><th>Zona</th></tr></thead><tbody>{attendance.map((r:any)=><tr key={r.id}><td>{r.work_date}</td><td>{r.employee_name}</td><td>{r.attendance_status}</td><td>{r.arrival_time||"-"}</td><td>{r.zone_result||"-"}</td></tr>)}</tbody></table></div></div>}</> : null}
         {panel === "errors" ? <ErrorsPanel canWrite={canWrite} today={today} employees={employees.filter((e: any) => e.status === "active")} orders={orders} rows={errors} busy={busy} submit={submitError} /> : null}
         {panel === "ranking" ? <PerformanceProfilesPanel supabase={supabase} today={today} employees={employees} /> : null}
         {panel === "reports" ? <ManagementReportsPanel supabase={supabase} today={today} isAdmin={isAdmin} displayName={displayName} /> : null}
         {panel === "employees" ? <EmployeesPanel canManage={isAdmin} teams={bundle.teams || []} employees={employees} busy={busy} submit={submitEmployee} /> : null}
-        {panel === "settings" ? <SettingsPanel isAdmin={isAdmin} bundle={bundle} busy={busy} submitKpi={submitKpi} addInventoryTask={addInventoryTask} renameInventoryTask={renameInventoryTask} toggleInventoryTask={toggleInventoryTask} supabase={supabase} refreshBundle={refreshBundle} setToast={setToast} /> : null}
+        {panel === "settings" ? <><SettingsPanel isAdmin={isAdmin} bundle={bundle} busy={busy} submitKpi={submitKpi} addInventoryTask={addInventoryTask} renameInventoryTask={renameInventoryTask} toggleInventoryTask={toggleInventoryTask} supabase={supabase} refreshBundle={refreshBundle} setToast={setToast} />{isAdmin && <AttendanceZoneEditor bundle={bundle} refreshBundle={refreshBundle} setToast={setToast}/>}</> : null}
         {panel === "admin" && isAdmin ? <AdminPanel bundle={bundle} busy={busy} recordAction={adminRecord} bulkAction={adminBulk} switchPanel={switchPanel} /> : null}
       </div>
     </main>
