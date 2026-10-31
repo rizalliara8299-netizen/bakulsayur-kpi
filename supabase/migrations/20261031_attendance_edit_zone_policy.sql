@@ -165,3 +165,62 @@ end; $$;
 
 revoke all on function public.admin_create_attendance_policy(uuid,date,jsonb) from public,anon;
 grant execute on function public.admin_create_attendance_policy(uuid,date,jsonb) to authenticated;
+
+-- Prevent normal attendance entry from silently restoring archived records.
+CREATE OR REPLACE FUNCTION public.upsert_attendance(p_work_date date, p_employee_id uuid, p_status text, p_arrival_time time without time zone DEFAULT NULL::time without time zone, p_notes text DEFAULT NULL::text)
+ RETURNS attendance_entries
+ LANGUAGE plpgsql
+ SET search_path TO 'public', 'pg_temp'
+AS $function$
+declare
+  v_org uuid := private.current_org_id();
+  v_team uuid;
+  v_policy uuid;
+  v_zone text := '-';
+  v_result public.attendance_entries;
+begin
+  if p_status not in ('Hadir','Izin','Sakit','Alpa','Libur') then raise exception 'Invalid attendance status'; end if;
+  if p_status = 'Hadir' and p_arrival_time is null then raise exception 'Arrival time is required'; end if;
+  if p_status in ('Izin','Sakit') and nullif(btrim(coalesce(p_notes,'')),'') is null then raise exception 'Notes are required'; end if;
+  select team_id into v_team from public.employees
+   where id = p_employee_id and organization_id = v_org and status = 'active' and deleted_at is null;
+  if v_team is null then raise exception 'Active employee not found'; end if;
+  if p_status = 'Hadir' then
+    select id into v_policy from public.attendance_policies
+     where organization_id = v_org and team_id = v_team and is_active = true
+       and effective_from <= p_work_date and (effective_until is null or effective_until >= p_work_date)
+     order by effective_from desc, version_no desc limit 1;
+    select zone_name into v_zone from public.attendance_zone_ranges
+     where policy_id = v_policy and p_arrival_time between start_time and end_time
+     order by sort_order limit 1;
+    if v_zone is null then
+      select case when p_arrival_time < min(start_time) then 'Hijau' else 'Merah' end
+      into v_zone from public.attendance_zone_ranges where policy_id=v_policy;
+    end if;
+    v_zone := coalesce(v_zone, 'Merah');
+  end if;
+  if exists (select 1 from public.attendance_entries where employee_id=p_employee_id and work_date=p_work_date and deleted_at is not null) then
+    raise exception 'Catatan ini berada di arsip. Pulihkan lewat Admin Control dahulu';
+  end if;
+  if exists (select 1 from public.monthly_period_closings c where c.organization_id=v_org and c.status='closed' and c.period_start=date_trunc('month',p_work_date)::date) then
+    raise exception 'Periode laporan sudah ditutup';
+  end if;
+  insert into public.attendance_entries (
+    organization_id, work_date, employee_id, attendance_status, arrival_time, zone_policy_id, zone_result, notes, created_by, updated_by
+  ) values (
+    v_org, p_work_date, p_employee_id, p_status, case when p_status='Hadir' then p_arrival_time else null end,
+    case when p_status='Hadir' then v_policy else null end, case when p_status='Hadir' then v_zone else '-' end,
+    p_notes, auth.uid(), auth.uid()
+  )
+  on conflict (employee_id, work_date) do update set
+    attendance_status = excluded.attendance_status,
+    arrival_time = excluded.arrival_time,
+    zone_policy_id = excluded.zone_policy_id,
+    zone_result = excluded.zone_result,
+    notes = excluded.notes,
+    updated_by = auth.uid(),
+    updated_at = now()
+  returning * into v_result;
+  return v_result;
+end;
+$function$;
