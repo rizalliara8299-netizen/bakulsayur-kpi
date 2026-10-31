@@ -251,3 +251,59 @@ begin
 end; $$;
 revoke all on function public.admin_archive_attendance_entry(uuid) from public,anon;
 grant execute on function public.admin_archive_attendance_entry(uuid) to authenticated;
+
+
+-- Schedule Inventory to use the same zone hours as Produksi from the next Makassar-local day.
+-- Existing attendance, existing policy history, and current-day zone evaluation are untouched.
+do $inventory_seed$
+declare
+  v_org uuid;
+  v_inventory uuid;
+  v_production uuid;
+  v_source uuid;
+  v_old public.attendance_policies;
+  v_new uuid;
+  v_effective date := ((now() at time zone 'Asia/Makassar')::date + 1);
+begin
+  for v_org in select distinct organization_id from public.teams loop
+    select id into v_inventory from public.teams
+      where organization_id=v_org and name='Inventory' and is_active=true limit 1;
+    select id into v_production from public.teams
+      where organization_id=v_org and name='Produksi' and is_active=true limit 1;
+    if v_inventory is null or v_production is null then
+      continue;
+    end if;
+    select p.id into v_source from public.attendance_policies p
+      where p.organization_id=v_org and p.team_id=v_production and p.is_active=true
+        and p.effective_from <= v_effective
+        and (p.effective_until is null or p.effective_until >= v_effective)
+      order by p.effective_from desc,p.version_no desc limit 1;
+    if v_source is null then
+      raise exception 'Active Produksi zone policy unavailable for migration date';
+    end if;
+    select * into v_old from public.attendance_policies p
+      where p.organization_id=v_org and p.team_id=v_inventory
+      order by p.effective_from desc,p.version_no desc limit 1 for update;
+    if v_old.id is not null and v_old.effective_from >= v_effective then
+      raise exception 'Inventory already has a new/future effective policy: refuse to overwrite';
+    end if;
+    if v_old.id is not null then
+      update public.attendance_policies
+        set effective_until=v_effective - 1
+        where id=v_old.id and organization_id=v_org;
+    end if;
+    insert into public.attendance_policies(organization_id,team_id,version_no,effective_from,is_active)
+      values(v_org,v_inventory,coalesce(v_old.version_no,0)+1,v_effective,true)
+      returning id into v_new;
+    insert into public.attendance_zone_ranges(policy_id,zone_name,start_time,end_time,sort_order)
+      select v_new,zone_name,start_time,end_time,sort_order
+      from public.attendance_zone_ranges where policy_id=v_source;
+    insert into public.audit_logs(organization_id,actor_user_id,action,entity_type,entity_id,before_data,after_data,source)
+      values(v_org,null,'ATTENDANCE_POLICY_CREATED','attendance_policies',v_new::text,
+        case when v_old.id is null then null else to_jsonb(v_old) end,
+        jsonb_build_object('team','Inventory','copiedFrom','Produksi','effectiveFrom',v_effective),
+        'migration');
+    v_inventory:=null;v_production:=null;v_source:=null;
+  end loop;
+end;
+$inventory_seed$;
