@@ -4,6 +4,12 @@ import { getBrowserSupabase } from "@/lib/supabase/browser";
 const zones=["Hijau","Kuning","Oranye","Merah"];
 const base=[["07:45","08:14"],["08:15","08:29"],["08:30","08:44"],["08:45","23:59"]];
 const short=(v:any)=>String(v||"").slice(0,5);
+const policyHours=(bundle:any,name:string):string[][]=>{
+ const p=[...(bundle.attendancePolicies||[])].filter((x:any)=>x.team===name)
+   .sort((a:any,b:any)=>String(b.effectiveFrom).localeCompare(String(a.effectiveFrom)))[0];
+ return zones.map((z,i)=>{const r=(p?.ranges||[]).find((x:any)=>x.name===z);
+   return r?[short(r.start),short(r.end)]:[...base[i]];});
+};
 const tomorrow=()=>{const p=new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Makassar",year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(new Date(Date.now()+86400000));const x=Object.fromEntries(p.map(z=>[z.type,z.value]));return [x.year,x.month,x.day].join("-");};
 export function AttendanceAdminTools({rows,employees,refreshBundle,setToast}:any){
  const db=useMemo(()=>getBrowserSupabase(),[]);
@@ -38,12 +44,9 @@ export function AttendanceAdminTools({rows,employees,refreshBundle,setToast}:any
 export function AttendanceZoneEditor({bundle,refreshBundle,setToast}:any){
  const db=useMemo(()=>getBrowserSupabase(),[]);
  const teams=(bundle.teams||[]).filter((t:any)=>["Produksi","Inventory"].includes(t.name));
- const [selected,setSelected]=useState(""),[date,setDate]=useState(tomorrow),[hours,setHours]=useState<string[][]>(base.map(x=>[...x])),[busy,setBusy]=useState(false);
+ const [selected,setSelected]=useState(""),[date,setDate]=useState(tomorrow),[hours,setHours]=useState<string[][]>(()=>policyHours(bundle,teams[0]?.name||"Produksi")),[busy,setBusy]=useState(false);
  const teamId=selected||teams[0]?.id||"";
- const load=(name:string)=>{
-  const p=[...(bundle.attendancePolicies||[])].filter((p:any)=>p.team===name).sort((a:any,b:any)=>String(b.effectiveFrom).localeCompare(String(a.effectiveFrom)))[0];
-  setHours(zones.map((z,i)=>{const r=(p?.ranges||[]).find((r:any)=>r.name===z);return r?[short(r.start),short(r.end)]:[...base[i]];}));
- };
+ const load=(name:string)=>setHours(policyHours(bundle,name));
  async function submit(e:FormEvent<HTMLFormElement>){
   e.preventDefault();if(!teamId||!navigator.onLine){setToast({type:"err",text:"Pilih divisi dan gunakan koneksi internet."});return;}
   if(!window.confirm("Buat versi kebijakan baru? Riwayat lama tetap tersimpan."))return;
