@@ -224,3 +224,30 @@ begin
   return v_result;
 end;
 $function$;
+
+
+-- Protect a closed accounting period when archiving attendance from the dashboard.
+create or replace function public.admin_archive_attendance_entry(p_id uuid)
+returns boolean language plpgsql security definer set search_path=public,pg_temp
+as $$
+declare
+ v_org uuid:=public.require_admin_organization();
+ v_old public.attendance_entries;
+begin
+ select * into v_old from public.attendance_entries
+ where id=p_id and organization_id=v_org and deleted_at is null for update;
+ if not found then return false; end if;
+ if exists (select 1 from public.monthly_period_closings c
+  where c.organization_id=v_org and c.period_start=date_trunc('month',v_old.work_date)::date
+   and c.status='closed') then
+   raise exception 'Periode laporan sudah ditutup. Buka closing dahulu';
+ end if;
+ update public.attendance_entries set deleted_at=now(),updated_by=auth.uid(),updated_at=now()
+ where id=p_id and organization_id=v_org and deleted_at is null;
+ insert into public.audit_logs(organization_id,actor_user_id,action,entity_type,entity_id,before_data,after_data,source)
+ values(v_org,auth.uid(),'ATTENDANCE_ARCHIVE','attendance_entries',p_id::text,
+ to_jsonb(v_old),jsonb_build_object('deleted_at',now()),'admin_control');
+ return true;
+end; $$;
+revoke all on function public.admin_archive_attendance_entry(uuid) from public,anon;
+grant execute on function public.admin_archive_attendance_entry(uuid) to authenticated;
