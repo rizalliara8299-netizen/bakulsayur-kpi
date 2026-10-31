@@ -1,5 +1,6 @@
-import { AttendanceAdminTools, AttendanceZoneEditor } from "@/components/attendance-admin-tools";
 "use client";
+
+import { AttendanceAdminTools, AttendanceZoneEditor } from "@/components/attendance-admin-tools";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { logout } from "@/app/actions/auth";
