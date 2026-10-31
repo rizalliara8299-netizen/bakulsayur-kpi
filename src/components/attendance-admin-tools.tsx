@@ -4,7 +4,7 @@ import { getBrowserSupabase } from "@/lib/supabase/browser";
 const zones=["Hijau","Kuning","Oranye","Merah"];
 const base=[["07:45","08:14"],["08:15","08:29"],["08:30","08:44"],["08:45","23:59"]];
 const short=(v:any)=>String(v||"").slice(0,5);
-const tomorrow=()=>new Date(Date.now()+86400000).toLocaleDateString("en-CA",{timeZone:"Asia/Makassar"});
+const tomorrow=()=>{const p=new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Makassar",year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(new Date(Date.now()+86400000));const x=Object.fromEntries(p.map(z=>[z.type,z.value]));return [x.year,x.month,x.day].join("-");};
 export function AttendanceAdminTools({rows,employees,refreshBundle,setToast}:any){
  const db=useMemo(()=>getBrowserSupabase(),[]);
  const [edit,setEdit]=useState<any>(null),[busy,setBusy]=useState(false);
@@ -31,7 +31,7 @@ export function AttendanceAdminTools({rows,employees,refreshBundle,setToast}:any
     <div className="form-actions full"><button type="submit" className="btn btn-primary" disabled={busy}>Simpan Perbaikan</button><button type="button" className="btn btn-soft" onClick={()=>setEdit(null)}>Batal</button></div>
   </form>}
   <div className="table-wrap"><table><thead><tr><th>Tanggal</th><th>Nama</th><th>Status</th><th>Jam</th><th>Zona</th><th>Keterangan</th><th>Aksi</th></tr></thead>
-  <tbody>{rows.map((r:any)=><tr key={r.id}><td>{r.work_date}</td><td>{r.employee_name}</td><td>{r.attendance_status}</td><td>{r.arrival_time||"-"}</td><td>{r.zone_result||"-"}</td><td>{r.notes||"-"}</td><td><button type="button" className="btn btn-soft" disabled={busy} onClick={()=>setEdit(r)}>Edit</button> <button type="button" className="btn btn-danger" disabled={busy} onClick={()=>{if(window.confirm("Arsipkan catatan ini?"))void run(()=>db.rpc("admin_soft_delete_record",{p_module:"attendance",p_id:r.id}),"Kehadiran diarsipkan.");}}>Hapus</button></td></tr>)}</tbody></table></div>
+  <tbody>{rows.map((r:any)=><tr key={r.id}><td>{r.work_date}</td><td>{r.employee_name}</td><td>{r.attendance_status}</td><td>{r.arrival_time||"-"}</td><td>{r.zone_result||"-"}</td><td>{r.notes||"-"}</td><td><button type="button" className="btn btn-soft" disabled={busy} onClick={()=>setEdit(r)}>Edit</button> <button type="button" className="btn btn-danger" disabled={busy} onClick={()=>{if(window.confirm("Arsipkan catatan ini?"))void run(()=>db.rpc("admin_archive_attendance_entry",{p_id:r.id}),"Kehadiran diarsipkan.");}}>Hapus</button></td></tr>)}</tbody></table></div>
   {!rows.length&&<p className="muted">Belum ada data kehadiran.</p>}
  </section>;
 }
