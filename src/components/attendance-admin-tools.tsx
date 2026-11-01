@@ -1,6 +1,7 @@
 "use client";
 import { useMemo,useState,type FormEvent } from "react";
 import { getBrowserSupabase } from "@/lib/supabase/browser";
+import { adminCorrectAttendance } from "@/app/actions/attendance-corrections";
 const zones=["Hijau","Kuning","Oranye","Merah"];
 const base=[["07:45","08:14"],["08:15","08:29"],["08:30","08:44"],["08:45","23:59"]];
 const short=(v:any)=>String(v||"").slice(0,5);
@@ -25,7 +26,17 @@ export function AttendanceAdminTools({rows,employees,refreshBundle,setToast}:any
  async function save(e:FormEvent<HTMLFormElement>){
   e.preventDefault();if(!edit)return;
   const d=new FormData(e.currentTarget);
-  await run(()=>db.rpc("admin_update_attendance_entry",{p_id:edit.id,p_work_date:String(d.get("date")),p_employee_id:String(d.get("employee")),p_status:String(d.get("status")),p_arrival_time:String(d.get("arrival")||"")||null,p_notes:String(d.get("notes")||"")||null}),"Kehadiran diperbaiki.");
+  await run(async()=>{
+    const res=await adminCorrectAttendance({
+      id: edit.id,
+      workDate: String(d.get("date")||""),
+      employeeId: String(d.get("employee")||""),
+      status: String(d.get("status")||""),
+      arrivalTime: String(d.get("arrival")||"")||null,
+      notes: String(d.get("notes")||"")||null,
+    });
+    return res.ok ? {data:true,error:null} : {data:false,error:{message:res.error}};
+  },"Kehadiran diperbaiki.");
  }
  return <section className="card panel"><h2>Riwayat Kehadiran</h2>
   {edit&&<form key={edit.id} onSubmit={save} className="form-grid">
@@ -37,7 +48,7 @@ export function AttendanceAdminTools({rows,employees,refreshBundle,setToast}:any
     <div className="form-actions full"><button type="submit" className="btn btn-primary" disabled={busy}>Simpan Perbaikan</button><button type="button" className="btn btn-soft" onClick={()=>setEdit(null)}>Batal</button></div>
   </form>}
   <div className="table-wrap"><table><thead><tr><th>Tanggal</th><th>Nama</th><th>Status</th><th>Jam</th><th>Zona</th><th>Keterangan</th><th>Aksi</th></tr></thead>
-  <tbody>{rows.map((r:any)=><tr key={r.id}><td>{r.work_date}</td><td>{r.employee_name}</td><td>{r.attendance_status}</td><td>{r.arrival_time||"-"}</td><td>{r.zone_result||"-"}</td><td>{r.notes||"-"}</td><td><button type="button" className="btn btn-soft" disabled={busy} onClick={()=>setEdit(r)}>Edit</button> <button type="button" className="btn btn-danger" disabled={busy} onClick={()=>{if(window.confirm("Arsipkan catatan ini?"))void run(()=>db.rpc("admin_archive_attendance_entry",{p_id:r.id}),"Kehadiran diarsipkan.");}}>Hapus</button></td></tr>)}</tbody></table></div>
+  <tbody>{rows.map((r:any)=><tr key={r.id}><td>{r.work_date}</td><td>{r.employee_name}</td><td>{r.attendance_status}</td><td>{r.arrival_time||"-"}</td><td>{r.zone_result||"-"}</td><td>{r.notes||"-"}</td><td><button type="button" className="btn btn-soft" disabled={busy} onClick={()=>setEdit(r)}>Edit</button> <button type="button" className="btn btn-danger" disabled={busy} onClick={()=>{if(window.confirm("Arsipkan catatan ini?"))void run(()=>db.rpc("admin_soft_delete_record",{p_module:"attendance",p_id:r.id}),"Kehadiran diarsipkan.");}}>Hapus</button></td></tr>)}</tbody></table></div>
   {!rows.length&&<p className="muted">Belum ada data kehadiran.</p>}
  </section>;
 }
