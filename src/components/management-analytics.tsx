@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 const doneStatuses = new Set(["Selesai", "Tidak ada kebutuhan"]);
 
@@ -42,6 +42,42 @@ function inventoryStats(data: any, current = true) {
   const completed = filtered.filter((r: any) => doneStatuses.has(r.work_status)).length;
   const issues = filtered.filter((r: any) => r.work_status === "Ada kendala" || r.work_status === "Belum selesai").length;
   return { expected, completed, issues, recorded: filtered.length, missing: Math.max(0, expected - filtered.length), compliance: expected ? pct(completed, expected) : 0 };
+}
+
+const attendanceStatuses = ["Hadir", "Izin", "Sakit", "Alpa", "Libur"] as const;
+const attendanceZones = ["Hijau", "Kuning", "Oranye", "Merah"] as const;
+
+function monthlyAttendanceBreakdown(rows: any[]) {
+  const statuses = Object.fromEntries(attendanceStatuses.map(s => [s, 0])) as Record<string,number>;
+  const zones = Object.fromEntries(attendanceZones.map(z => [z, 0])) as Record<string,number>;
+  const byEmployee = new Map<string, any>();
+  for (const r of rows) {
+    const status = String(r.attendance_status || "");
+    if (status in statuses) statuses[status]++;
+    const id = String(r.employee_id || r.employee_name || "");
+    const person = byEmployee.get(id) || {
+      id, name: r.employee_name || "Tanpa nama", code: r.employee_code || "", team: r.team || "",
+      records: 0, hadir: 0, izin: 0, sakit: 0, alpa: 0, libur: 0,
+      hijau: 0, kuning: 0, oranye: 0, merah: 0, unclassified: 0,
+    };
+    person.records++;
+    const key = status.toLowerCase();
+    if (key in person) person[key]++;
+    if (status === "Hadir") {
+      const zone = String(r.zone_result || "");
+      if (zone in zones) {
+        zones[zone]++;
+        person[zone.toLowerCase()]++;
+      } else person.unclassified++;
+    }
+    byEmployee.set(id, person);
+  }
+  const present = statuses.Hadir;
+  return {
+    total: rows.length, present, statuses, zones,
+    unclassified: Math.max(0, present - Object.values(zones).reduce((a,b)=>a+b,0)),
+    employees: [...byEmployee.values()].sort((a,b)=>a.name.localeCompare(b.name,"id")),
+  };
 }
 
 function deriveSummary(data: any) {
@@ -174,6 +210,7 @@ function workbookSheet(name: string, rows: any[][]) {
 }
 function downloadManagementExcel(data: any, s: any, insights: any) {
   const production = data.production || [], attendance = data.attendance || [], inventory = data.inventory || [], errors = data.errors || [];
+  const history = monthlyAttendanceBreakdown(attendance);
   const sheets = [
     workbookSheet("Ringkasan", [
       ["LAPORAN BULANAN BAKUL SAYUR", monthLabel(data.period?.start || "")],
@@ -192,6 +229,11 @@ function downloadManagementExcel(data: any, s: any, insights: any) {
     workbookSheet("KPI", [["KPI", "Poin", "Jumlah", "Jumlah Input"], ...s.kpiRows.map((r: any) => [r.name, r.points, r.quantity, r.entries])]),
     workbookSheet("Produksi", [["Tanggal", "Kode", "Karyawan", "KPI", "Jumlah", "Satuan", "Poin/Satuan", "Total Poin", "Keterangan"], ...production.map((r: any) => [r.work_date, r.employee_code, r.employee_name, r.kpi_name, n(r.quantity), r.unit_snapshot, n(r.points_per_unit_snapshot), n(r.total_points), r.notes || ""])]),
     workbookSheet("Kehadiran", [["Tanggal", "Kode", "Karyawan", "Tim", "Status", "Jam Datang", "Zona", "Keterangan"], ...attendance.map((r: any) => [r.work_date, r.employee_code, r.employee_name, r.team, r.attendance_status, r.arrival_time || "", r.zone_result || "", r.notes || ""])]),
+    workbookSheet("Rekap Kehadiran", [
+      ["Karyawan","Tim","Total Catatan","Hadir","Izin","Sakit","Alpa","Libur","Hijau","Kuning","Oranye","Merah","Belum Diklasifikasi"],
+      ...history.employees.map((r:any)=>[r.name,r.team,r.records,r.hadir,r.izin,r.sakit,r.alpa,r.libur,r.hijau,r.kuning,r.oranye,r.merah,r.unclassified]),
+      ["TOTAL","",history.total,...attendanceStatuses.map(k=>history.statuses[k]),...attendanceZones.map(k=>history.zones[k]),history.unclassified],
+    ]),
     workbookSheet("Inventory", [["Tanggal", "Karyawan", "Agenda", "Status", "Keterangan"], ...inventory.map((r: any) => [r.work_date, r.employee_name, r.task_name, r.work_status, r.notes || ""])]),
     workbookSheet("Kesalahan", [["Tanggal", "Jenis", "Customer", "Pelaksana", "PJ", "Severity", "Status Evaluasi", "Kronologi", "Keterangan"], ...errors.map((r: any) => [r.error_date, r.error_type, r.customer_name_snapshot || "", r.performer_name || "", r.responsible_name || "", r.severity, r.evaluation_status, r.chronology, r.notes || ""])]),
   ];
@@ -236,6 +278,7 @@ function buildPdf(title: string, lines: string[]) {
   return pdf;
 }
 function downloadManagementPdf(data: any, s: any, insights: any) {
+  const history = monthlyAttendanceBreakdown(data.attendance || []);
   const lines = [
     `Periode: ${monthLabel(data.period?.start || "")}`,
     `Perbandingan: ${monthLabel(data.period?.previousStart || "")} (${data.period?.previousStart} s.d. ${data.period?.previousEnd})`,
@@ -244,6 +287,9 @@ function downloadManagementPdf(data: any, s: any, insights: any) {
     `Operational Health: ${s.health}/100 (indikator manajemen, bukan KPI karyawan).`,
     `Produksi: ${num(s.points)} poin, perubahan ${signed(s.pointDelta)} dibanding periode pembanding yang setara.`,
     `Kehadiran: ${s.attendanceRate}% hadir; ${s.punctuality}% dari kehadiran berada pada zona Hijau.`,
+    `Rekap seluruh catatan bulan: ${history.total}; ${attendanceStatuses.map(k=>k+" "+history.statuses[k]).join(", ")}.`,
+    `Zona hadir: ${attendanceZones.map(k=>k+" "+history.zones[k]).join(", ")}; belum diklasifikasi ${history.unclassified}.`,
+    ...history.employees.map((r:any)=>`${r.name}: total ${r.records}; Hadir ${r.hadir}, Izin ${r.izin}, Sakit ${r.sakit}, Alpa ${r.alpa}, Libur ${r.libur}; Hijau ${r.hijau}, Kuning ${r.kuning}, Oranye ${r.oranye}, Merah ${r.merah}.`),
     `Inventory: compliance ${s.inv.compliance}% dengan ${s.inv.missing} item belum tercatat dan ${s.inv.issues} kendala/belum selesai.`,
     `Kesalahan: ${s.errors} kasus; periode pembanding ${s.prevErrors} kasus.`,
     `Kelengkapan data operasional: ${s.completeness}%.`,
@@ -275,6 +321,7 @@ function DeltaChip({ value, inverse = false }: { value: number; inverse?: boolea
 
 export function ManagementReportsPanel({ supabase, today, isAdmin, displayName }: PropsBase) {
   const [period, setPeriod] = useState(today.slice(0, 7));
+  const didChooseInitialPeriod = useRef(false);
   const [live, setLive] = useState<any>(null);
   const [snapshot, setSnapshot] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -284,6 +331,20 @@ export function ManagementReportsPanel({ supabase, today, isAdmin, displayName }
     setLoading(true); setMessage(null); setSnapshot(null);
     const { data, error } = await supabase.rpc("get_management_analytics", { p_period: `${target}-01` });
     if (error) { setMessage(error.message); setLoading(false); return; }
+    // On first open, a new empty calendar month should not hide prior monthly evaluation.
+    // Later user-selected months are always respected, even if empty.
+    if (!didChooseInitialPeriod.current) {
+      didChooseInitialPeriod.current = true;
+      const hasActivity = ["production","attendance","inventory","errors"].some(k => (data?.[k] || []).length > 0);
+      const available = (data?.availableMonths || [])
+        .map((v: any) => String(v).slice(0, 7))
+        .filter((m: string) => m <= today.slice(0, 7))
+        .sort().reverse();
+      if (target === today.slice(0, 7) && !hasActivity && available[0] && available[0] !== target) {
+        setPeriod(available[0]);
+        return;
+      }
+    }
     setLive(data);
     if (data?.closing?.status === "closed") {
       const frozen = await supabase.rpc("get_monthly_report_snapshot", { p_period: `${target}-01` });
@@ -296,6 +357,7 @@ export function ManagementReportsPanel({ supabase, today, isAdmin, displayName }
   const data = snapshot || live;
   const summary = useMemo(() => data ? deriveSummary(data) : null, [data]);
   const insights = useMemo(() => summary ? buildInsights(summary) : null, [summary]);
+  const attendanceHistory = useMemo(() => monthlyAttendanceBreakdown(data?.attendance || []), [data]);
 
   async function closePeriod() {
     if (!summary || !live) return;
@@ -339,6 +401,24 @@ export function ManagementReportsPanel({ supabase, today, isAdmin, displayName }
       <article><span>COMPLIANCE INVENTORY</span><strong>{summary.inv.expected ? `${summary.inv.compliance}%` : "N/A"}</strong><div><small>{summary.inv.missing} belum diisi · {summary.inv.issues} kendala</small></div></article>
       <article><span>KESALAHAN</span><strong>{summary.errors}</strong><div><DeltaChip value={delta(summary.errors, summary.prevErrors)} inverse /> <small>vs periode setara</small></div></article>
       <article><span>KELENGKAPAN DATA</span><strong>{summary.completeness}%</strong><div><small>coverage input operasional</small></div></article>
+    </section>
+
+    <section className="card analytics-panel">
+      <div className="analytics-card-head"><div><h2>Evaluasi Kehadiran Bulanan — Termasuk Data Lama</h2>
+        <p>Seluruh catatan aktif pada bulan terpilih dihitung, termasuk sebelum revisi kebijakan. Zona mengikuti hasil yang tersimpan pada saat pencatatan agar riwayat tidak berubah diam-diam.</p>
+      </div></div>
+      <div className="analytics-kpi-breakdown">
+        <article><div><strong>Total Catatan</strong><span>Termasuk catatan historis dalam bulan ini</span></div><b>{attendanceHistory.total}</b></article>
+        {attendanceStatuses.map(k => <article key={k}><div><strong>{k}</strong></div><b>{attendanceHistory.statuses[k]}</b></article>)}
+      </div>
+      <div className="analytics-kpi-breakdown" style={{marginTop:12}}>
+        {attendanceZones.map(k => <article key={k}><div><strong>Zona {k}</strong></div><b>{attendanceHistory.zones[k]}</b></article>)}
+      </div>
+      {attendanceHistory.unclassified > 0 && <p className="analytics-empty">{attendanceHistory.unclassified} catatan Hadir belum memiliki hasil zona yang valid; tetap masuk hitungan Hadir.</p>}
+      {attendanceHistory.employees.length ? <div className="portrait-table-wrap">
+        <table className="analytics-table"><thead><tr><th>Karyawan</th><th>Catatan</th><th>Hadir</th><th>Izin</th><th>Sakit</th><th>Alpa</th><th>Libur</th><th>Hijau</th><th>Kuning</th><th>Oranye</th><th>Merah</th></tr></thead>
+        <tbody>{attendanceHistory.employees.map((r:any)=><tr key={r.id}><td><strong>{r.name}</strong><small>{r.team}</small></td><td>{r.records}</td><td>{r.hadir}</td><td>{r.izin}</td><td>{r.sakit}</td><td>{r.alpa}</td><td>{r.libur}</td><td>{r.hijau}</td><td>{r.kuning}</td><td>{r.oranye}</td><td>{r.merah}</td></tr>)}</tbody></table>
+      </div> : <p className="analytics-empty">Belum ada kehadiran yang tercatat pada bulan ini. Pilih Agustus, September, atau Oktober 2026 untuk melihat riwayat yang tersedia.</p>}
     </section>
 
     <section className="card analytics-executive">
