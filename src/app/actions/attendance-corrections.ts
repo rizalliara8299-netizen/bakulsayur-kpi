@@ -38,7 +38,8 @@ export async function adminCorrectAttendance(input: EditAttendanceInput): Promis
   if (!uuidPattern.test(id) || !uuidPattern.test(employeeId)) {
     return { ok: false, error: "ID catatan atau karyawan tidak valid." };
   }
-  if (!datePattern.test(workDate) || new Date(workDate + "T00:00:00Z").toISOString().slice(0, 10) !== workDate) {
+  const parsedDate = Date.parse(workDate + "T00:00:00Z");
+  if (!datePattern.test(workDate) || !Number.isFinite(parsedDate) || new Date(parsedDate).toISOString().slice(0, 10) !== workDate) {
     return { ok: false, error: "Tanggal kehadiran tidak valid." };
   }
   if (!allowedStatuses.has(status)) return { ok: false, error: "Status kehadiran tidak valid." };
@@ -76,7 +77,7 @@ export async function adminCorrectAttendance(input: EditAttendanceInput): Promis
     work_date: workDate,
     employee_id: employeeId,
     attendance_status: status,
-    arrival_time: status === "Hadir" ? arrivalTime : null,
+    arrival_time: status === "Hadir" ? (coreChanged ? arrivalTime : current.arrival_time) : null,
     notes,
     updated_by: user.id,
   };
