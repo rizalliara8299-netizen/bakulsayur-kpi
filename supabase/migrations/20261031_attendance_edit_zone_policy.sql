@@ -113,7 +113,9 @@ begin
  end if;
  select t.name into v_team from public.teams t
  where t.id=p_team_id and t.organization_id=v_org and t.is_active=true for update;
- if v_team is null or v_team='Admin' then raise exception 'Pilih divisi kehadiran yang aktif'; end if;
+ if v_team is null or v_team not in ('Produksi','Inventory') then
+   raise exception 'Policy kehadiran hanya tersedia untuk Produksi dan Inventory';
+ end if;
  if not exists (select 1 from public.attendance_policies pol
    where pol.team_id=p_team_id and pol.organization_id=v_org) then
    raise exception 'Buat jenis policy terlebih dahulu sebelum memperbarui jamnya';
@@ -176,107 +178,6 @@ create trigger audit_attendance_policy_change
 after insert or update on public.attendance_policies
 for each row execute function private.audit_row_change();
 
-
--- Activate exactly two additional, admin-named attendance policy types.
--- Both new types and an Inventory v2 copy the Produksi ranges prospectively.
--- No employee/team assignments or historic attendance records are modified.
-create or replace function public.admin_create_remaining_attendance_types(
-  p_name_three text,p_name_four text,p_effective_from date
-) returns boolean
-language plpgsql security invoker set search_path=public,pg_temp as $four$
-declare
-  v_org uuid:=public.require_admin_organization();
-  v_third text:=btrim(coalesce(p_name_three,''));
-  v_fourth text:=btrim(coalesce(p_name_four,''));
-  v_source uuid;
-  v_inventory uuid;
-  v_inventory_old public.attendance_policies;
-  v_new_team uuid;
-  v_new_policy uuid;
-  v_type_name text;
-  v_n integer:=2;
-  v_count integer;
-begin
-  if p_effective_from is null or p_effective_from <= (now() at time zone 'Asia/Makassar')::date then
-    raise exception 'Tanggal efektif harus setelah hari ini';
-  end if;
-  if length(v_third)<2 or length(v_fourth)<2 or length(v_third)>60 or length(v_fourth)>60
-    or lower(v_third)=lower(v_fourth) then
-    raise exception 'Isi dua nama jenis yang berbeda (2–60 karakter)';
-  end if;
-  if lower(v_third) in ('admin','produksi','inventory')
-    or lower(v_fourth) in ('admin','produksi','inventory') then
-    raise exception 'Nama jenis tambahan tidak boleh sama dengan tim yang sudah ada';
-  end if;
-  perform pg_advisory_xact_lock(hashtext('attendance-four-types-'||v_org::text));
-
-  select count(distinct pol.team_id) into v_count
-  from public.attendance_policies pol join public.teams t on t.id=pol.team_id
-  where pol.organization_id=v_org and t.name<>'Admin';
-  if v_count <> 2 then
-    raise exception 'Jenis policy saat ini bukan dua. Segarkan aplikasi dan periksa konfigurasi';
-  end if;
-  if exists(select 1 from public.teams t where t.organization_id=v_org
-      and lower(t.name) in (lower(v_third),lower(v_fourth))) then
-    raise exception 'Nama jenis sudah digunakan di sistem';
-  end if;
-
-  select pol.id into v_source from public.attendance_policies pol
-   join public.teams t on t.id=pol.team_id
-  where pol.organization_id=v_org and t.name='Produksi' and pol.is_active=true
-    and pol.effective_from<=p_effective_from
-    and (pol.effective_until is null or pol.effective_until>=p_effective_from)
-  order by pol.effective_from desc,pol.version_no desc limit 1;
-  if v_source is null then raise exception 'Policy Produksi pada tanggal efektif belum ditemukan'; end if;
-  if (select count(*) from public.attendance_zone_ranges r where r.policy_id=v_source)<>4 then
-    raise exception 'Policy Produksi belum memiliki empat zona';
-  end if;
-
-  select t.id into v_inventory from public.teams t
-  where t.organization_id=v_org and t.name='Inventory' and t.is_active=true;
-  if v_inventory is null then raise exception 'Jenis Inventory belum ditemukan'; end if;
-
-  -- Preserve the previous Inventory policy and version history.
-  select * into v_inventory_old from public.attendance_policies pol
-   where pol.organization_id=v_org and pol.team_id=v_inventory
-   order by pol.effective_from desc,pol.version_no desc limit 1 for update;
-  if v_inventory_old.id is null or v_inventory_old.effective_from>=p_effective_from then
-    raise exception 'Tanggal efektif Inventory harus setelah policy sebelumnya';
-  end if;
-  if (
-    select jsonb_agg(jsonb_build_array(r.zone_name,r.start_time,r.end_time) order by r.sort_order)
-      from public.attendance_zone_ranges r where r.policy_id=v_inventory_old.id
-  ) is distinct from (
-    select jsonb_agg(jsonb_build_array(r.zone_name,r.start_time,r.end_time) order by r.sort_order)
-      from public.attendance_zone_ranges r where r.policy_id=v_source
-  ) then
-    update public.attendance_policies set effective_until=p_effective_from-1
-    where id=v_inventory_old.id and organization_id=v_org;
-    insert into public.attendance_policies(organization_id,team_id,version_no,effective_from,is_active)
-     values(v_org,v_inventory,v_inventory_old.version_no+1,p_effective_from,true)
-     returning id into v_new_policy;
-    insert into public.attendance_zone_ranges(policy_id,zone_name,start_time,end_time,sort_order)
-     select v_new_policy,r.zone_name,r.start_time,r.end_time,r.sort_order
-     from public.attendance_zone_ranges r where r.policy_id=v_source;
-  end if;
-
-  foreach v_type_name in array array[v_third,v_fourth] loop
-    v_n:=v_n+1;
-    insert into public.teams(organization_id,name,code,is_active)
-    values(v_org,v_type_name,'ATT-POL-'||v_n,true)
-    returning id into v_new_team;
-    insert into public.attendance_policies(organization_id,team_id,version_no,effective_from,is_active)
-    values(v_org,v_new_team,1,p_effective_from,true)
-    returning id into v_new_policy;
-    insert into public.attendance_zone_ranges(policy_id,zone_name,start_time,end_time,sort_order)
-      select v_new_policy,r.zone_name,r.start_time,r.end_time,r.sort_order
-      from public.attendance_zone_ranges r where r.policy_id=v_source;
-  end loop;
-  return true;
-end;
-$four$;
-revoke execute on function public.admin_create_remaining_attendance_types(text,text,date) from public,anon;
-grant execute on function public.admin_create_remaining_attendance_types(text,text,date) to authenticated;
 
 -- The regular attendance form may update existing active records, but MUST NOT restore archived records.
 -- This preserves the existing function signature, RLS behavior and history triggers.
