@@ -41,12 +41,60 @@ export function AttendanceAdminTools({rows,employees,refreshBundle,setToast}:any
   {!rows.length&&<p className="muted">Belum ada data kehadiran.</p>}
  </section>;
 }
+export function AttendancePolicyOverview({bundle}:any){
+ const entries=[...(bundle.attendancePolicies||[])];
+ const teamNames=(bundle.teams||[]).map((t:any)=>String(t.name)).filter((n:string)=>n!=="Admin");
+ const known=["Produksi","Inventory",...teamNames.filter((n:string)=>!["Produksi","Inventory"].includes(n))].slice(0,4);
+ const slots=[...known,...Array.from({length:Math.max(0,4-known.length)},(_,i)=>"Jenis "+(known.length+i+1)+" — belum diberi nama")];
+ const prod=policyHours(bundle,"Produksi");
+ return <section className="card panel">
+  <div className="panel-title-row"><div><h2>Policy Kehadiran Karyawan</h2><p className="muted">Empat jenis policy, masing-masing memiliki empat zona. Kebijakan yang belum dibuat ditandai sebagai rancangan.</p></div></div>
+  <div className="two-col">
+   {slots.map((name:string,index:number)=>{
+     const historical=entries.filter((p:any)=>p.team===name).sort((a:any,b:any)=>String(b.effectiveFrom).localeCompare(String(a.effectiveFrom)));
+     const policy=historical[0];
+     const isPending=!policy;
+     const ranges=policy?zones.map((zone,i)=>{const r=(policy.ranges||[]).find((x:any)=>x.name===zone);return {name:zone,start:r?short(r.start):prod[i][0],end:r?short(r.end):prod[i][1]};}):zones.map((zone,i)=>({name:zone,start:prod[i][0],end:prod[i][1]}));
+     return <div className="setting-block" key={name}>
+      <strong>{index+1}. {name}{policy?" · v"+policy.version:""}</strong>
+      <div className="muted small">{policy?"Berlaku "+policy.effectiveFrom+(policy.effectiveUntil?" s.d. "+policy.effectiveUntil:" hingga sekarang"):"Belum aktif · contoh zona mengikuti Produksi"}</div>
+      <div className="zone-list">{ranges.map((r:any)=><span className={"zone zone-"+r.name.toLowerCase()} key={r.name}>{r.name} {r.start}–{r.end}</span>)}</div>
+     </div>;
+   })}
+  </div>
+ </section>;
+}
 export function AttendanceZoneEditor({bundle,refreshBundle,setToast}:any){
  const db=useMemo(()=>getBrowserSupabase(),[]);
- const teams=(bundle.teams||[]).filter((t:any)=>["Produksi","Inventory"].includes(t.name));
- const [selected,setSelected]=useState(""),[date,setDate]=useState(tomorrow),[hours,setHours]=useState<string[][]>(()=>policyHours(bundle,teams[0]?.name||"Produksi")),[busy,setBusy]=useState(false);
+ const teams=(bundle.teams||[]).filter((t:any)=>t.name!=="Admin").sort((a:any,b:any)=>{
+  const rank=(n:string)=>n==="Produksi"?0:n==="Inventory"?1:2;
+  return rank(a.name)-rank(b.name)||String(a.name).localeCompare(String(b.name));
+ });
+ const [selected,setSelected]=useState(""),[date,setDate]=useState(tomorrow),[hours,setHours]=useState<string[][]>(()=>policyHours(bundle,"Produksi")),[busy,setBusy]=useState(false);
+ const [nameThree,setNameThree]=useState(""),[nameFour,setNameFour]=useState("");
  const teamId=selected||teams[0]?.id||"";
  const load=(name:string)=>setHours(policyHours(bundle,name));
+ async function createRemaining(e:FormEvent<HTMLFormElement>){
+   e.preventDefault();
+   if(teams.length!==2){setToast({type:"err",text:"Jenis policy sudah berubah. Segarkan dashboard sebelum melanjutkan."});return;}
+   if(!navigator.onLine){setToast({type:"err",text:"Koneksi internet diperlukan."});return;}
+   const first=nameThree.trim(), second=nameFour.trim();
+   if(!first||!second||first.toLowerCase()===second.toLowerCase()){
+      setToast({type:"err",text:"Masukkan dua nama jenis policy yang berbeda."});return;
+   }
+   if(!window.confirm("Buat dua jenis policy baru memakai jam Produksi, serta samakan jam Inventory untuk tanggal efektif baru? Data lama tidak diubah."))return;
+   setBusy(true);
+   try{
+     const {error}=await db.rpc("admin_create_remaining_attendance_types",
+      {p_name_three:first,p_name_four:second,p_effective_from:date});
+     if(error)throw error;
+     if(!(await refreshBundle(false)))throw new Error("Tersimpan, tetapi data terbaru belum dapat dimuat. Silakan refresh.");
+     setNameThree("");setNameFour("");
+     setToast({type:"ok",text:"Empat jenis policy telah dibuat. Jam dua jenis baru dan Inventory mengikuti Produksi."});
+   }catch(err:any){setToast({type:"err",text:err.message||"Gagal menambah policy."});}
+   finally{setBusy(false);}
+ }
+
  async function submit(e:FormEvent<HTMLFormElement>){
   e.preventDefault();if(!teamId||!navigator.onLine){setToast({type:"err",text:"Pilih divisi dan gunakan koneksi internet."});return;}
   if(!window.confirm("Buat versi kebijakan baru? Riwayat lama tetap tersimpan."))return;
@@ -64,5 +112,11 @@ export function AttendanceZoneEditor({bundle,refreshBundle,setToast}:any){
    {zones.map((zone,i)=><label key={zone} className="field"><span>{zone}</span><div style={{display:"flex",alignItems:"center",gap:6}}><input aria-label={zone+" mulai"} type="time" required value={hours[i][0]} onChange={e=>setHours(old=>old.map((v,j)=>j===i?[e.target.value,v[1]]:v))}/><span>–</span><input aria-label={zone+" akhir"} type="time" required value={hours[i][1]} onChange={e=>setHours(old=>old.map((v,j)=>j===i?[v[0],e.target.value]:v))}/></div></label>)}
    <div className="form-actions full"><button disabled={busy||!teamId} className="btn btn-primary">Simpan Zona Baru</button></div>
   </form>
+  {teams.length===2 && <form className="form-grid" onSubmit={createRemaining} style={{marginTop:20}}>
+   <div className="full"><h3>Lengkapi Empat Jenis Policy</h3><p className="muted">Beri nama dua jenis tambahan. Keduanya otomatis menggunakan empat zona jam Produksi. Inventory juga mendapatkan versi baru dengan jam yang sama, tanpa mengubah penilaian lama.</p></div>
+   <label className="field"><span>Nama jenis ke-3</span><input required maxLength={60} value={nameThree} placeholder="Masukkan nama divisi / jenis" onChange={e=>setNameThree(e.target.value)}/></label>
+   <label className="field"><span>Nama jenis ke-4</span><input required maxLength={60} value={nameFour} placeholder="Masukkan nama divisi / jenis" onChange={e=>setNameFour(e.target.value)}/></label>
+   <div className="form-actions full"><button className="btn btn-primary" disabled={busy}>Buat Dua Jenis dengan Jam Produksi</button></div>
+  </form>}
  </section>;
 }
