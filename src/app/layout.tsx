@@ -16,6 +16,7 @@ import "./pwa-kpi-premium.css";
 
 export const metadata: Metadata = {
   applicationName: "KPI Bakul Sayur",
+  manifest: "/manifest.webmanifest?v=7",
   title: "KPI Bakul Sayur",
   description: "Manajemen KPI Produksi, checklist Inventory, monitoring bulanan, analisis, kehadiran, dan evaluasi Bakul Sayur",
   appleWebApp: {
@@ -42,7 +43,6 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="id">
       <head>
-        <link rel="manifest" href="/manifest.webmanifest" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="application-name" content="KPI Bakul Sayur" />
         <script
@@ -54,26 +54,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
                 window.__kpiInstallPrompt = event;
                 window.dispatchEvent(new Event('kpi-install-ready'));
               });
-              if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.register('/sw.js', { scope: '/' }).then(function(registration) {
-                  if (registration.waiting) {
-                    registration.waiting.postMessage({ type: 'SKIP_WAITING' });
-                  }
-                  var reloadKey = 'kpi-sw-controlled-v6';
-                  var reloadOnce = function() {
-                    if (!navigator.serviceWorker.controller && !sessionStorage.getItem(reloadKey)) {
-                      sessionStorage.setItem(reloadKey, '1');
-                      window.location.reload();
-                    }
-                  };
-                  navigator.serviceWorker.ready.then(function() {
-                    setTimeout(reloadOnce, 150);
-                  }).catch(function(){});
-                  navigator.serviceWorker.addEventListener('controllerchange', function() {
-                    window.dispatchEvent(new Event('kpi-sw-ready'));
-                  }, { once: true });
-                }).catch(function(){});
-              }
+
             `,
           }}
         />

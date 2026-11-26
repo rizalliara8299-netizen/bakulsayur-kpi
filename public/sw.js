@@ -1,5 +1,5 @@
-const SHELL="kpi-bakul-shell-v6";
-const RUNTIME="kpi-bakul-runtime-v6";
+const SHELL="kpi-bakul-shell-v7";
+const RUNTIME="kpi-bakul-runtime-v7";
 const PRECACHE=["/pwa-start","/offline.html","/manifest.webmanifest","/kpi-app-icon.svg","/kpi-icon-192.png","/kpi-icon-512.png","/bakul-sayur-logo.svg"];
 
 self.addEventListener("install",event=>{
@@ -18,7 +18,7 @@ self.addEventListener("install",event=>{
 self.addEventListener("activate",event=>{
   event.waitUntil((async()=>{
     const keys=await caches.keys();
-    await Promise.all(keys.filter(key=>![SHELL,RUNTIME].includes(key)).map(key=>caches.delete(key)));
+    await Promise.all(keys.filter(key=>key.startsWith("kpi-bakul-") && ![SHELL,RUNTIME].includes(key)).map(key=>caches.delete(key)));
     await self.clients.claim();
     const clients=await self.clients.matchAll({type:"window"});
     for(const client of clients){
@@ -110,6 +110,12 @@ self.addEventListener("fetch",event=>{
 
   if(isAuthPath(url.pathname)){
     event.respondWith(fetch(request));
+    return;
+  }
+
+  // Installation metadata and icons must never be supplied from stale caches.
+  if(url.pathname==="/manifest.webmanifest" || /^\/kpi-icon-(192|512)\.png$/.test(url.pathname)){
+    event.respondWith(fetch(request,{cache:"no-store"}));
     return;
   }
 

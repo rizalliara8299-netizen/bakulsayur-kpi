@@ -7,16 +7,13 @@ export default function PwaStartPage() {
 
   useEffect(() => {
     const go = () => {
-      if (navigator.onLine) {
-        window.location.replace("/dashboard");
-      } else {
-        setOffline(true);
-      }
+      setOffline(!navigator.onLine);
+      const standalone = window.matchMedia("(display-mode: standalone)").matches || Boolean((navigator as Navigator & { standalone?: boolean }).standalone);
+      if (navigator.onLine && standalone) window.location.replace("/dashboard");
     };
-    const timer = window.setTimeout(go, 160);
+    go();
     window.addEventListener("online", go);
     return () => {
-      window.clearTimeout(timer);
       window.removeEventListener("online", go);
     };
   }, []);
@@ -44,10 +41,9 @@ export default function PwaStartPage() {
         <div style={{ marginTop: 10, color: "#0a7750", fontSize: 10, fontWeight: 900, letterSpacing: ".16em" }}>BAKUL SAYUR</div>
         <h1 style={{ margin: "7px 0 4px", fontSize: 24, letterSpacing: "-.04em" }}>KPI Dashboard</h1>
         <p style={{ margin: 0, color: "#6d7b74", fontSize: 12, lineHeight: 1.55 }}>
-          {offline ? "Mode offline aktif. Buka data terakhir yang sudah pernah dimuat." : "Menyiapkan dashboard…"}
+          {offline ? "Mode offline aktif. Buka data terakhir yang sudah pernah dimuat." : "Pasang aplikasi KPI dari menu browser atau lanjutkan ke dashboard."}
         </p>
-        {offline ? (
-          <button
+        <button
             type="button"
             onClick={() => window.location.replace("/dashboard")}
             style={{
@@ -61,9 +57,8 @@ export default function PwaStartPage() {
               fontWeight: 800,
             }}
           >
-            Buka Data Terakhir
+            {offline ? "Buka Data Terakhir" : "Buka Dashboard"}
           </button>
-        ) : null}
       </section>
     </main>
   );

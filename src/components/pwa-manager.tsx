@@ -50,6 +50,7 @@ export function PwaManager() {
   const [promptEvent, setPromptEvent] = useState<InstallPromptEvent | null>(null);
   const [guideOpen, setGuideOpen] = useState(false);
   const [swReady, setSwReady] = useState(false);
+  const [workerFailed, setWorkerFailed] = useState(false);
 
   useEffect(() => {
     setOnline(navigator.onLine);
@@ -62,7 +63,7 @@ export function PwaManager() {
     captureEarlyPrompt();
 
     if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("/sw.js", { scope: "/" }).then(async (registration) => {
+      navigator.serviceWorker.register("/sw.js", { scope: "/", updateViaCache: "none" }).then(async (registration) => {
         registration.update().catch(() => undefined);
         if (registration.waiting) registration.waiting.postMessage({ type: "SKIP_WAITING" });
 
@@ -74,14 +75,7 @@ export function PwaManager() {
           url: window.location.pathname + window.location.search,
         });
 
-        if (browser.android && browser.chromeAndroid && !navigator.serviceWorker.controller) {
-          const key = "kpi-pwa-android-control-v6";
-          if (!sessionStorage.getItem(key)) {
-            sessionStorage.setItem(key, "1");
-            window.location.reload();
-          }
-        }
-      }).catch(() => undefined);
+      }).catch(() => setWorkerFailed(true));
     }
 
     const onOnline = () => {
@@ -126,11 +120,13 @@ export function PwaManager() {
 
     const nativePrompt = promptEvent || window.__kpiInstallPrompt || null;
     if (nativePrompt) {
-      await nativePrompt.prompt();
-      const choice = await nativePrompt.userChoice;
-      if (choice.outcome === "accepted" || choice.outcome === "dismissed") {
-        setPromptEvent(null);
-        window.__kpiInstallPrompt = null;
+      setPromptEvent(null);
+      window.__kpiInstallPrompt = null;
+      try {
+        await nativePrompt.prompt();
+        await nativePrompt.userChoice;
+      } catch {
+        setGuideOpen(true);
       }
       return;
     }
@@ -138,24 +134,6 @@ export function PwaManager() {
     if (browser.android && !browser.chromeAndroid) {
       openCurrentPageInChrome();
       return;
-    }
-
-    if (browser.android && browser.chromeAndroid && "serviceWorker" in navigator) {
-      try {
-        const ready = await navigator.serviceWorker.ready;
-        if (!navigator.serviceWorker.controller) {
-          const key = "kpi-pwa-install-reload-v6";
-          if (!sessionStorage.getItem(key)) {
-            sessionStorage.setItem(key, "1");
-            window.location.reload();
-            return;
-          }
-        }
-        ready.active?.postMessage({
-          type: "CACHE_CURRENT",
-          url: window.location.pathname + window.location.search,
-        });
-      } catch {}
     }
 
     setGuideOpen(true);
@@ -169,10 +147,12 @@ export function PwaManager() {
   const installStatus = promptEvent
     ? "Siap dipasang"
     : browser.android && !browser.chromeAndroid
-      ? "WebAPK lewat Chrome"
-      : swReady
-        ? "PWA siap"
-        : "Menyiapkan…";
+      ? "Buka di Chrome"
+      : workerFailed
+        ? "Service worker gagal"
+        : swReady
+          ? "Lihat panduan pemasangan"
+          : "Menyiapkan…";
 
   return (
     <>
@@ -212,11 +192,11 @@ export function PwaManager() {
               </>
             ) : browser.android && browser.chromeAndroid ? (
               <>
-                <p>Chrome sudah menerima service worker, tetapi prompt native belum tersedia pada sesi ini.</p>
+                <p>{workerFailed ? "Service worker gagal dimuat. Periksa koneksi dan muat ulang." : "Chrome belum mengirim izin instalasi native. Status service worker saja tidak menjamin aplikasi dapat dipasang."}</p>
                 <ol>
                   <li>Pastikan halaman selesai dimuat dengan internet aktif.</li>
                   <li>Buka menu Chrome <strong>⋮ → Add to home screen → Install app</strong>.</li>
-                  <li>Jika yang muncul hanya <strong>Create shortcut</strong>, tutup tab lalu buka ulang setelah beberapa detik.</li>
+                  <li>Jika tombol Instal belum tersedia, buka <a href="/pwa-start">halaman pemasangan KPI</a>. Jangan pilih pintasan jika ingin aplikasi standalone.</li>
                 </ol>
               </>
             ) : (
