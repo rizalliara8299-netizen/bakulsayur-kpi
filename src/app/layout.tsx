@@ -16,7 +16,7 @@ import "./pwa-kpi-premium.css";
 
 export const metadata: Metadata = {
   applicationName: "KPI Bakul Sayur",
-  manifest: "/manifest.webmanifest?v=7",
+  manifest: "/manifest.webmanifest?v=8",
   title: "KPI Bakul Sayur",
   description: "Manajemen KPI Produksi, checklist Inventory, monitoring bulanan, analisis, kehadiran, dan evaluasi Bakul Sayur",
   appleWebApp: {
@@ -26,11 +26,12 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: "/kpi-icon-192.png", type: "image/png", sizes: "192x192" },
-      { url: "/kpi-icon-512.png", type: "image/png", sizes: "512x512" },
+      { url: "/favicon.ico", sizes: "48x48", type: "image/x-icon" },
+      { url: "/kpi-icon-192.png?v=8", type: "image/png", sizes: "192x192" },
+      { url: "/kpi-icon-512.png?v=8", type: "image/png", sizes: "512x512" },
       { url: "/kpi-app-icon.svg", type: "image/svg+xml", sizes: "any" }
     ],
-    apple: [{ url: "/kpi-icon-192.png", type: "image/png", sizes: "192x192" }],
+    apple: [{ url: "/kpi-icon-192.png?v=8", type: "image/png", sizes: "192x192" }],
   },
 };
 

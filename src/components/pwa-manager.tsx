@@ -196,7 +196,7 @@ export function PwaManager() {
                 <ol>
                   <li>Pastikan halaman selesai dimuat dengan internet aktif.</li>
                   <li>Buka menu Chrome <strong>⋮ → Add to home screen → Install app</strong>.</li>
-                  <li>Jika tombol Instal belum tersedia, buka <a href="/pwa-start">halaman pemasangan KPI</a>. Jangan pilih pintasan jika ingin aplikasi standalone.</li>
+                  <li>Jika tombol Instal belum tersedia, buka <a href="/install.html">halaman pemasangan KPI</a>. Jangan pilih pintasan jika ingin aplikasi standalone.</li>
                 </ol>
               </>
             ) : (

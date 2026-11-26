@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="id"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pasang KPI Bakul Sayur</title>
+<meta name="theme-color" content="#0b3b2d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="manifest" href="/manifest.webmanifest?v=8">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" type="image/png" href="/kpi-icon-192.png?v=8" sizes="192x192">
+<link rel="apple-touch-icon" href="/kpi-icon-192.png?v=8">
+<style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#eff6f1;font:16px system-ui,sans-serif;color:#153b2f}main{box-sizing:border-box;background:white;border:1px solid #d6e7db;border-radius:24px;padding:28px;width:min(92%,440px);box-shadow:0 18px 55px #153b2f16}img{display:block;border-radius:20px}h1{font-size:26px;margin:18px 0 8px}p{line-height:1.5}button,a.action{display:block;box-sizing:border-box;text-align:center;width:100%;background:#08734c;color:white;border:0;border-radius:12px;padding:14px;font:700 16px system-ui;text-decoration:none;margin:12px 0;cursor:pointer}button:disabled{background:#dce9df;color:#52695a;cursor:default}a.action{background:#eef5ef;color:#153b2f}details{font-size:13px;margin-top:20px}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f2f6f3;padding:12px;border-radius:10px}small{display:block;line-height:1.5}</style>
+</head><body><main>
+<img src="/kpi-icon-192.png?v=8" alt="KPI Bakul Sayur" width="88" height="88">
+<h1>KPI Bakul Sayur</h1><p>Pasang dashboard sebagai aplikasi di HP, tanpa membuat pintasan browser.</p>
+<button id="install" disabled>Menyiapkan instalasi…</button>
+<p id="status" role="status">Memeriksa ikon dan dukungan browser.</p>
+<a class="action" href="/dashboard">Buka Dashboard</a>
+<small>Android: gunakan Chrome, tab biasa (bukan samaran). iPhone: Safari → Bagikan → Tambahkan ke Layar Utama.</small>
+<details open><summary>Diagnostik instalasi</summary><pre id="diagnostics">Memeriksa…</pre><button id="copy" type="button">Salin hasil pemeriksaan</button></details>
+</main><script>
+(function(){
+const button=document.getElementById('install'),status=document.getElementById('status'),diag=document.getElementById('diagnostics');
+const checks={https:window.isSecureContext?'OK':'Gagal',browser:navigator.userAgent,prompt:'Belum diterima',worker:'Memeriksa'};
+const show=()=>{diag.textContent=Object.entries(checks).map(([k,v])=>k+': '+v).join('\n');};
+let prompt=null;
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();prompt=e;checks.prompt='Tersedia';button.disabled=false;button.textContent='Instal Aplikasi';status.textContent='Aplikasi siap dipasang.';show()});
+window.addEventListener('appinstalled',()=>{checks.prompt='Terpasang';button.disabled=true;button.textContent='Aplikasi terpasang';status.textContent='Instalasi selesai. Buka aplikasi dari layar utama.';show()});
+if(matchMedia('(display-mode: standalone)').matches||navigator.standalone){checks.prompt='Sudah standalone';button.textContent='Sudah terpasang';status.textContent='Aplikasi sudah berjalan secara standalone.';}
+else {button.textContent='Menunggu izin Chrome';status.textContent='Jika Chrome belum menawarkan instalasi, gunakan menu tiga titik → Instal aplikasi. Jangan pilih Buat pintasan.';}
+button.addEventListener('click',async()=>{if(!prompt)return;let e=prompt;prompt=null;button.disabled=true;try{await e.prompt();let c=await e.userChoice;checks.prompt=c.outcome;status.textContent=c.outcome==='accepted'?'Permintaan instalasi diterima Chrome.':'Instalasi dibatalkan.';}catch(e){checks.prompt='Gagal: '+e.message;status.textContent='Chrome menolak permintaan instalasi.';}show()});
+(async()=>{try{let response=await fetch('/manifest.webmanifest?v=8',{cache:'no-store'});if(!response.ok)throw Error('HTTP '+response.status);let m=await response.json();checks.manifest=m.name+' | '+m.display+' | '+m.start_url;for(let icon of m.icons.filter((i,j,a)=>a.findIndex(x=>x.src===i.src)===j)){let img=new Image();img.src=icon.src;try{await img.decode();checks['ikon '+icon.sizes]=img.naturalWidth+'×'+img.naturalHeight+' OK';}catch(e){checks['ikon '+icon.sizes]='Gagal decode';}show()}}catch(e){checks.manifest='Gagal: '+e.message;}show()})();
+if('serviceWorker'in navigator){navigator.serviceWorker.register('/sw.js',{scope:'/',updateViaCache:'none'}).then(async()=>{await navigator.serviceWorker.ready;checks.worker='Aktif';show()}).catch(e=>{checks.worker='Gagal: '+e.message;show()});}else{checks.worker='Tidak didukung';show()}
+document.getElementById('copy').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(diag.textContent);status.textContent='Hasil pemeriksaan disalin.';}catch{status.textContent='Salin teks diagnostik secara manual.';}});
+show();
+})();
+</script></body></html>

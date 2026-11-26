@@ -12,6 +12,8 @@ export async function proxy(request: NextRequest) {
   const path = request.nextUrl.pathname;
   const isPublicPwa =
     path === "/pwa-start" ||
+    path === "/install.html" ||
+    path === "/favicon.ico" ||
     path === "/manifest.webmanifest" ||
     path === "/sw.js" ||
     path === "/offline.html" ||

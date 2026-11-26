@@ -1,5 +1,5 @@
-const SHELL="kpi-bakul-shell-v7";
-const RUNTIME="kpi-bakul-runtime-v7";
+const SHELL="kpi-bakul-shell-v8";
+const RUNTIME="kpi-bakul-runtime-v8";
 const PRECACHE=["/pwa-start","/offline.html","/manifest.webmanifest","/kpi-app-icon.svg","/kpi-icon-192.png","/kpi-icon-512.png","/bakul-sayur-logo.svg"];
 
 self.addEventListener("install",event=>{
@@ -114,7 +114,7 @@ self.addEventListener("fetch",event=>{
   }
 
   // Installation metadata and icons must never be supplied from stale caches.
-  if(url.pathname==="/manifest.webmanifest" || /^\/kpi-icon-(192|512)\.png$/.test(url.pathname)){
+  if(url.pathname==="/manifest.webmanifest" || url.pathname==="/favicon.ico" || /^\/kpi-icon-(192|512)\.png$/.test(url.pathname)){
     event.respondWith(fetch(request,{cache:"no-store"}));
     return;
   }
