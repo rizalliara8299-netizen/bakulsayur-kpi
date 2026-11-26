@@ -367,7 +367,7 @@ begin
     'admin', case when v_role in ('admin','superadmin') then public.admin_control_snapshot() else null end
   );
 end;
-$function$
+$function$;
 
 CREATE OR REPLACE FUNCTION public.get_management_analytics(p_period date DEFAULT NULL::date)
  RETURNS jsonb
@@ -475,7 +475,7 @@ begin
       where s.organization_id=v_org and s.period_start=v_start order by s.version_no desc limit 1),'null'::jsonb)
   );
 end;
-$function$
+$function$;
 
 CREATE OR REPLACE FUNCTION public.upsert_inventory_entry(p_work_date date, p_employee_id uuid, p_task_id uuid, p_work_status text, p_notes text DEFAULT NULL::text)
  RETURNS inventory_entries
@@ -502,5 +502,5 @@ begin
   returning * into v_result;
   return v_result;
 end;
-$function$
+$function$;
 
