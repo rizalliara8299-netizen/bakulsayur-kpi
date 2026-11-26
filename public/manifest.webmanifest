@@ -2,7 +2,7 @@
   "id": "/kpi-bakul-sayur",
   "name": "KPI Bakul Sayur",
   "short_name": "Bakul KPI",
-  "description": "Dashboard KPI, produksi, inventory, kehadiran, evaluasi, dan monitoring Bakul Sayur.",
+  "description": "Dashboard KPI, Produksi, Inventory, Admin, kehadiran, evaluasi, dan monitoring Bakul Sayur.",
   "start_url": "/pwa-start?source=pwa",
   "scope": "/",
   "display": "standalone",

@@ -128,7 +128,7 @@ export function PwaManager() {
     if (nativePrompt) {
       await nativePrompt.prompt();
       const choice = await nativePrompt.userChoice;
-      if (choice.outcome === "accepted") {
+      if (choice.outcome === "accepted" || choice.outcome === "dismissed") {
         setPromptEvent(null);
         window.__kpiInstallPrompt = null;
       }
@@ -163,8 +163,8 @@ export function PwaManager() {
 
   const installTitle =
     browser.android && !browser.chromeAndroid && !promptEvent
-      ? "Install via Chrome"
-      : "Install KPI";
+      ? "Pasang via Chrome"
+      : "Pasang Aplikasi";
 
   const installStatus = promptEvent
     ? "Siap dipasang"

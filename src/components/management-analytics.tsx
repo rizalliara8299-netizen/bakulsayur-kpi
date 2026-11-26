@@ -28,12 +28,12 @@ function uniqueCount(rows: any[], key: (x: any) => string) { return new Set(rows
 function inventoryStats(data: any, current = true) {
   const inventory = current ? (data.inventory || []) : (data.inventoryPrevious || []);
   const attendance = current ? (data.attendance || []) : (data.attendancePrevious || []);
-  const activeTasks = (data.tasks || []).filter((t: any) => t.active);
+  const activeTasks = (data.tasks || []).filter((t: any) => t.active && (t.department || "Inventory") === "Inventory");
   const activeIds = new Set(activeTasks.map((t: any) => t.id));
   const filtered = inventory.filter((r: any) => activeIds.has(r.task_id));
   const presentDays = new Set(
     attendance
-      .filter((r: any) => (r.team === "Inventory" || !current) && r.attendance_status === "Hadir")
+      .filter((r: any) => (r.team === "Inventory" || (!current && (data.employees || []).some((e:any)=>e.id===r.employee_id && e.team==="Inventory"))) && r.attendance_status === "Hadir")
       .map((r: any) => `${r.work_date}|${r.employee_id}`),
   );
   const fallbackDays = new Set(filtered.map((r: any) => `${r.work_date}|${r.employee_id}`));
@@ -234,7 +234,8 @@ function downloadManagementExcel(data: any, s: any, insights: any) {
       ...history.employees.map((r:any)=>[r.name,r.team,r.records,r.hadir,r.izin,r.sakit,r.alpa,r.libur,r.hijau,r.kuning,r.oranye,r.merah,r.unclassified]),
       ["TOTAL","",history.total,...attendanceStatuses.map(k=>history.statuses[k]),...attendanceZones.map(k=>history.zones[k]),history.unclassified],
     ]),
-    workbookSheet("Inventory", [["Tanggal", "Karyawan", "Agenda", "Status", "Keterangan"], ...inventory.map((r: any) => [r.work_date, r.employee_name, r.task_name, r.work_status, r.notes || ""])]),
+    workbookSheet("Inventory", [["Tanggal", "Karyawan", "Agenda", "Status", "Keterangan"], ...inventory.filter((r:any)=>(r.department||"Inventory")==="Inventory").map((r: any) => [r.work_date, r.employee_name, r.task_name, r.work_status, r.notes || ""])]),
+    workbookSheet("Checklist Admin", [["Tanggal", "Karyawan", "Agenda", "Status", "Keterangan"], ...inventory.filter((r:any)=>r.department==="Admin").map((r:any)=>[r.work_date,r.employee_name,r.task_name,r.work_status,r.notes||""])]),
     workbookSheet("Kesalahan", [["Tanggal", "Jenis", "Customer", "Pelaksana", "PJ", "Severity", "Status Evaluasi", "Kronologi", "Keterangan"], ...errors.map((r: any) => [r.error_date, r.error_type, r.customer_name_snapshot || "", r.performer_name || "", r.responsible_name || "", r.severity, r.evaluation_status, r.chronology, r.notes || ""])]),
   ];
   const content = `<?xml version="1.0"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"><Styles><Style ss:ID="Header"><Font ss:Bold="1"/><Interior ss:Color="#DFF4ED" ss:Pattern="Solid"/></Style></Styles>${sheets.join("")}</Workbook>`;

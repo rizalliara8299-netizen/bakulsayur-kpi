@@ -54,9 +54,9 @@ export function AttendanceAdminTools({rows,employees,refreshBundle,setToast}:any
 }
 export function AttendancePolicyOverview({bundle}:any){
  const entries=[...(bundle.attendancePolicies||[])];
- const divisionNames=["Produksi","Inventory"];
+ const divisionNames=(bundle.teams||[]).filter((t:any)=>t.active!==false).map((t:any)=>t.name);
  return <section className="card panel">
-  <div className="panel-title-row"><div><h2>Policy Kehadiran Karyawan</h2><p className="muted">Dua divisi, masing-masing memiliki empat zona: Hijau, Kuning, Oranye, dan Merah. Versi lama tetap tersedia untuk evaluasi bulanan.</p></div></div>
+  <div className="panel-title-row"><div><h2>Policy Kehadiran Karyawan</h2><p className="muted">Setiap bagian memiliki empat zona: Hijau, Kuning, Oranye, dan Merah. Versi lama tetap tersedia untuk evaluasi bulanan.</p></div></div>
   <div className="two-col">
     {divisionNames.map((team:string)=>{
       const policies=entries.filter((p:any)=>p.team===team)
@@ -78,10 +78,12 @@ export function AttendancePolicyOverview({bundle}:any){
 }
 export function AttendanceZoneEditor({bundle,refreshBundle,setToast}:any){
  const db=useMemo(()=>getBrowserSupabase(),[]);
- const teams=(bundle.teams||[]).filter((t:any)=>["Produksi","Inventory"].includes(t.name))
+ const teams=(bundle.teams||[]).filter((t:any)=>t.active!==false)
    .sort((a:any,b:any)=>(a.name==="Produksi"?0:1)-(b.name==="Produksi"?0:1));
  const [selected,setSelected]=useState(""),[date,setDate]=useState(tomorrow),[hours,setHours]=useState<string[][]>(()=>policyHours(bundle,"Produksi")),[busy,setBusy]=useState(false);
- const teamId=selected||teams[0]?.id||"";
+ const teamId=selected||teams.find((t:any)=>t.name==="Produksi")?.id||teams[0]?.id||"";
+ const [newTeam,setNewTeam]=useState("");
+ async function addTeam(e:FormEvent<HTMLFormElement>){e.preventDefault(); if(!newTeam.trim()||busy)return;setBusy(true);try{const {data,error}=await db.rpc("admin_create_attendance_team",{p_name:newTeam.trim()});if(error)throw error;if(!(await refreshBundle(false)))throw new Error("Bagian tersimpan tetapi refresh gagal.");setSelected(String(data));load("Produksi");setNewTeam("");setToast({type:"ok",text:"Bagian baru ditambahkan dengan zona awal Produksi."});}catch(e:any){setToast({type:"err",text:e.message||"Gagal menambah bagian."});}finally{setBusy(false);}}
  const load=(name:string)=>setHours(policyHours(bundle,name));
  async function submit(e:FormEvent<HTMLFormElement>){
   e.preventDefault();if(!teamId||!navigator.onLine){setToast({type:"err",text:"Pilih divisi dan gunakan koneksi internet."});return;}
@@ -92,7 +94,7 @@ export function AttendanceZoneEditor({bundle,refreshBundle,setToast}:any){
    setToast({type:"ok",text:"Zona versi "+data+" berhasil disimpan."});
   }catch(e:any){setToast({type:"err",text:e.message||"Gagal menyimpan zona."});}finally{setBusy(false);}
  }
- return <section className="card panel"><h2>Edit Empat Zona Kehadiran</h2><p className="muted">Hijau, Kuning, Oranye, dan Merah tersedia pada Produksi maupun Inventory. Untuk menyamakan Inventory dengan Produksi, pilih Inventory lalu klik Salin Jam Produksi. Perubahan berlaku sebagai versi baru tanpa menimpa histori.</p>
+ return <section className="card panel"><h2>Edit Empat Zona Kehadiran</h2><p className="muted">Hijau, Kuning, Oranye, dan Merah tersedia pada semua bagian. Bagian baru menggunakan jam awal Produksi dan dapat diatur kembali. Perubahan berlaku sebagai versi baru tanpa menimpa histori.</p>
   <form className="form-grid" onSubmit={submit}>
    <label className="field"><span>Divisi</span><select value={teamId} onChange={e=>{setSelected(e.target.value);load(teams.find((t:any)=>t.id===e.target.value)?.name||"");}}>{teams.map((t:any)=><option key={t.id} value={t.id}>{t.name}</option>)}</select></label>
    <label className="field"><span>Berlaku mulai</span><input type="date" min={tomorrow()} value={date} onChange={e=>setDate(e.target.value)} required/></label>
@@ -101,5 +103,6 @@ export function AttendanceZoneEditor({bundle,refreshBundle,setToast}:any){
    <div className="form-actions full"><button disabled={busy||!teamId} className="btn btn-primary">Simpan Zona Baru</button></div>
   </form>
 
+ <hr/><h2>Tambah Bagian</h2><p className="muted">Bagian baru juga muncul pada pilihan tim karyawan. Zona awal mengikuti Produksi.</p><form className="inventory-task-add" onSubmit={addTeam}><input required maxLength={60} placeholder="Nama bagian baru" value={newTeam} onChange={e=>setNewTeam(e.target.value)}/><button className="btn btn-primary" disabled={busy||!newTeam.trim()}>+ Tambah Bagian</button></form>
  </section>;
 }
